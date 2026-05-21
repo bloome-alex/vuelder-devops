@@ -19,10 +19,17 @@ export class ServicesController {
     return dependency as T;
   }
 
-  index = async (_req: Request, res: Response): Promise<void> => {
+  index = async (req: Request, res: Response): Promise<void> => {
     try {
       const servicesService = this.get<IServicesService>('servicesService');
-      res.json(await servicesService.listServices());
+      const { search, port, deployed } = req.query;
+
+      if (deployed === 'true') {
+        res.json(await servicesService.listDeployedServices(search as string, port as string));
+        return;
+      }
+
+      res.json(await servicesService.listServices(search as string, port as string));
     } catch (error) {
       this.handleError(res, error, 'Unexpected error listing services');
     }
@@ -98,6 +105,46 @@ export class ServicesController {
       res.json(result);
     } catch (error) {
       this.handleError(res, error, 'Unexpected error deploying service');
+    }
+  };
+
+  getTasks = async (req: Request<{ id: string }>, res: Response): Promise<void> => {
+    try {
+      const servicesService = this.get<IServicesService>('servicesService');
+      const tasks = await servicesService.getTasksByServiceId(req.params.id);
+      res.json(tasks);
+    } catch (error) {
+      this.handleError(res, error, 'Unexpected error listing tasks');
+    }
+  };
+
+  restartTask = async (req: Request<{ id: string }>, res: Response): Promise<void> => {
+    try {
+      const servicesService = this.get<IServicesService>('servicesService');
+      await servicesService.restartContainer(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      this.handleError(res, error, 'Unexpected error restarting container');
+    }
+  };
+
+  removeTask = async (req: Request<{ id: string }>, res: Response): Promise<void> => {
+    try {
+      const servicesService = this.get<IServicesService>('servicesService');
+      await servicesService.removeContainer(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      this.handleError(res, error, 'Unexpected error removing container');
+    }
+  };
+
+  inspectTask = async (req: Request<{ id: string }>, res: Response): Promise<void> => {
+    try {
+      const servicesService = this.get<IServicesService>('servicesService');
+      const inspection = await servicesService.inspectContainer(req.params.id);
+      res.json(inspection);
+    } catch (error) {
+      this.handleError(res, error, 'Unexpected error inspecting container');
     }
   };
 

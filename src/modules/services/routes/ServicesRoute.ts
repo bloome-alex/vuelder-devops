@@ -39,6 +39,10 @@ export class ServicesRoute implements IRoutes {
     router.post('/services/:id/deploy', servicesController.deploy);
     router.put('/services/:id', servicesController.update);
     router.delete('/services/:id', servicesController.destroy);
+    router.get('/services/:id/tasks', servicesController.getTasks);
+    router.post('/services/:id/tasks/:containerId/restart', servicesController.restartTask);
+    router.delete('/services/:id/tasks/:containerId', servicesController.removeTask);
+    router.get('/services/:id/tasks/:containerId', servicesController.inspectTask);
 
     for (const route of this.routes) {
       router.use(route.getRoutes());

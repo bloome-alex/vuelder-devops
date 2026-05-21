@@ -26,10 +26,15 @@ export interface ServiceDeployResult {
 }
 
 export interface IServicesService {
-  listServices(): Promise<Service[]>;
+  listServices(search?: string, port?: string): Promise<Service[]>;
+  listDeployedServices(search?: string, port?: string): Promise<Service[]>;
   getService(id: string): Promise<Service | null>;
   createService(payload: ServicePayload): Promise<Service>;
   updateService(id: string, payload: ServicePayload): Promise<Service | null>;
   deleteService(id: string): Promise<boolean>;
   deployService(id: string, payload: ServiceDeployPayload): Promise<ServiceDeployResult | null>;
+  getTasksByServiceId(serviceId: string): Promise<unknown[]>;
+  restartContainer(containerId: string): Promise<void>;
+  removeContainer(containerId: string): Promise<void>;
+  inspectContainer(containerId: string): Promise<unknown>;
 }

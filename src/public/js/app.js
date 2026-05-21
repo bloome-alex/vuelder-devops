@@ -3,15 +3,19 @@ import { renderImagePage } from "./components/imagePageComponent.js";
 import { renderServicePage } from "./components/servicePageComponent.js";
 import { renderSidebar } from "./components/sidebarComponent.js";
 import { renderTemplatePage } from "./components/templatePageComponent.js";
+import { renderDeployPage } from "./components/deployPageComponent.js";
 import { createImageProvider } from "./providers/imageProvider.js";
+import { createDeployProvider } from "./providers/deployProvider.js";
 import { getImages, syncImages } from "./services/imageService.js";
 import { createService, deleteService, deployService, getServices, updateService } from "./services/serviceService.js";
 import { createTemplate, deleteTemplate, getTemplates, updateTemplate } from "./services/templateService.js";
+import { getServices as getDeployServices, getTasks, restartTask, removeTask, inspectTask, restartService as restartDeployService, deleteService as deleteDeployService, inspectService } from "./services/deployService.js";
 
 const content = document.querySelector(".content");
 const imageService = { getImages, syncImages };
 const templateService = { getTemplates, createTemplate, updateTemplate, deleteTemplate };
 const serviceService = { getServices, createService, updateService, deleteService, deployService };
+const deployService2 = { getServices: getDeployServices, getTasks, restartTask, removeTask, inspectTask, restartService: restartDeployService, deleteService: deleteDeployService, inspectService };
 
 renderAppBar(document.querySelector(".appbar"));
 
@@ -31,6 +35,12 @@ function renderRoute() {
 
   if (route === "services") {
     renderServicePage(content, { serviceService, templateService, imageService });
+    return;
+  }
+
+  if (route === "deploy") {
+    const provider = createDeployProvider({ deployService: deployService2, rowsPerPage: 10 });
+    renderDeployPage(content, provider);
     return;
   }
 

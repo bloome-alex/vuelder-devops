@@ -24,8 +24,52 @@ export class ServicesService {
     return dependency as T;
   }
 
-  async listServices(): Promise<Service[]> {
-    const services = await ServiceSchema.find().sort({ createdAt: -1 }).exec();
+  async listServices(search?: string, port?: string): Promise<Service[]> {
+    const query: Record<string, unknown> = {};
+
+    if (search) {
+      query.name = { $regex: search, $options: 'i' };
+    }
+
+    let services = await ServiceSchema.find(query).sort({ createdAt: -1 }).exec();
+
+    if (port) {
+      const portNum = parseInt(port, 10);
+      services = services.filter((service) =>
+        service.ports.some((p) => p.hostPort === portNum || p.containerPort === portNum),
+      );
+    }
+
+    return services.map((service) => service.toJSON() as Service);
+  }
+
+  async listDeployedServices(search?: string, port?: string): Promise<Service[]> {
+    const deployedContainers = await this.docker.listContainers({
+      all: true,
+      filters: { label: ['vuelder.service.id'] },
+    });
+
+    const deployedServiceIds = [...new Set(deployedContainers.map(c => c.Labels['vuelder.service.id']))];
+
+    if (!deployedServiceIds.length) {
+      return [];
+    }
+
+    const query: Record<string, unknown> = { _id: { $in: deployedServiceIds } };
+
+    if (search) {
+      query.name = { $regex: search, $options: 'i' };
+    }
+
+    let services = await ServiceSchema.find(query).sort({ createdAt: -1 }).exec();
+
+    if (port) {
+      const portNum = parseInt(port, 10);
+      services = services.filter((service) =>
+        service.ports.some((p) => p.hostPort === portNum || p.containerPort === portNum),
+      );
+    }
+
     return services.map((service) => service.toJSON() as Service);
   }
 
@@ -307,5 +351,43 @@ export class ServicesService {
   private getContainerName(service: Service): string {
     const safeName = service.name.toLowerCase().replace(/[^a-z0-9_.-]+/g, '-').replace(/^-+|-+$/g, '') || 'service';
     return `vuelder-${safeName}-${service.id.slice(-6)}`;
+  }
+
+  async getTasksByServiceId(serviceId: string): Promise<unknown[]> {
+    const containers = await this.docker.listContainers({
+      all: true,
+      filters: { label: [`vuelder.service.id=${serviceId}`] },
+    });
+
+    return containers.map((container) => ({
+      id: container.Id,
+      name: container.Names[0]?.replace(/^\//, '') || '',
+      image: container.Image,
+      state: container.State,
+      status: container.Status,
+      createdAt: new Date(container.Created * 1000),
+      updatedAt: new Date(container.Status?.startsWith('Up') ? Date.now() : 0),
+      taskId: container.Id.substring(0, 12),
+      node: container.Labels?.['com.docker.swarm.node.id'] || 'local',
+    }));
+  }
+
+  async restartContainer(containerId: string): Promise<void> {
+    const container = this.docker.getContainer(containerId);
+    await container.restart();
+  }
+
+  async removeContainer(containerId: string): Promise<void> {
+    const container = this.docker.getContainer(containerId);
+    const info = await container.inspect();
+    if (info.State.Running) {
+      await container.stop();
+    }
+    await container.remove({ force: true });
+  }
+
+  async inspectContainer(containerId: string): Promise<unknown> {
+    const container = this.docker.getContainer(containerId);
+    return container.inspect();
   }
 }
