@@ -61,6 +61,24 @@ function renderTemplateOptions(templates, selectedId) {
   return `<option value="">Seleccionar template</option>${options.join("")}`;
 }
 
+function formatTemplateImage(template) {
+  if (!template?.image) {
+    return "";
+  }
+
+  return template.tag ? `${template.image}:${template.tag}` : template.image;
+}
+
+function renderTemplateImage(template) {
+  const image = formatTemplateImage(template);
+
+  if (!image) {
+    return `<span class="template-image-empty">Selecciona un template para cargar la imagen.</span>`;
+  }
+
+  return `<span class="template-image-value">${escapeHtml(image)}</span>`;
+}
+
 function renderEnvironmentRow(item = {}) {
   return `
     <div class="dynamic-row environment-row">
@@ -272,6 +290,7 @@ function createServiceModal({ templates, service, onSave, onClose, container }) 
 
   const current = cloneService({ ...emptyService, ...service });
   current.id = getServiceId(current);
+  const currentTemplate = findTemplate(templates, current.template);
   const modal = document.createElement("div");
   modal.className = "modal-backdrop";
   modal.innerHTML = `
@@ -294,6 +313,10 @@ function createServiceModal({ templates, service, onSave, onClose, container }) 
         <section class="tab-panel active" data-panel="general">
           <label>Template<select name="template" required>${renderTemplateOptions(templates, current.template)}</select></label>
           <label>Nombre<input name="name" value="${escapeHtml(current.name)}" required /></label>
+          <div class="template-image-preview">
+            <strong>Imagen Docker</strong>
+            <div class="template-image-content">${renderTemplateImage(currentTemplate)}</div>
+          </div>
         </section>
         <section class="tab-panel" data-panel="environment">
           <div class="panel-actions">
@@ -338,6 +361,12 @@ function createServiceModal({ templates, service, onSave, onClose, container }) 
     }
     return template;
   }
+
+  function updateTemplateImage() {
+    modal.querySelector(".template-image-content").innerHTML = renderTemplateImage(selectedTemplate());
+  }
+
+  form.querySelector('[name="template"]').addEventListener("change", updateTemplateImage);
 
   modal.addEventListener("click", event => {
     if (event.target === modal || event.target.closest(".close-modal")) {

@@ -451,6 +451,28 @@ button:disabled {
   box-shadow: 0 0 0 3px rgba(29, 111, 208, 0.12);
 }
 
+.template-image-preview {
+  display: grid;
+  gap: 7px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fbfdff;
+  color: var(--blue-900);
+  font-size: 13px;
+}
+
+.template-image-content {
+  overflow-wrap: anywhere;
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+.template-image-empty {
+  color: var(--muted);
+  font-family: inherit;
+}
+
 .tabs {
   display: flex;
   gap: 8px;
