@@ -8,6 +8,9 @@ import { ImagesRoute } from './src/modules/images/routes/ImagesRoute';
 import { TemplatesController } from './src/modules/templates/controllers/TemplatesController';
 import { TemplatesService } from './src/modules/templates/services/TemplatesService';
 import { TemplatesRoute } from './src/modules/templates/routes/TemplatesRoute';
+import { ServicesController } from './src/modules/services/controllers/ServicesController';
+import { ServicesService } from './src/modules/services/services/ServicesService';
+import { ServicesRoute } from './src/modules/services/routes/ServicesRoute';
 import { Logger } from './src/utils/Logger';
 
 const app = new Server();
@@ -19,10 +22,14 @@ const imagesRoute = new ImagesRoute().inject('imagesController', imagesControlle
 const templatesService = new TemplatesService().inject('imagesService', imagesService);
 const templatesController = new TemplatesController().inject('templatesService', templatesService);
 const templatesRoute = new TemplatesRoute().inject('templatesController', templatesController);
+const servicesService = new ServicesService().inject('templatesService', templatesService);
+const servicesController = new ServicesController().inject('servicesService', servicesService);
+const servicesRoute = new ServicesRoute().inject('servicesController', servicesController);
 
 //Añadir rutas
 routes.add(imagesRoute);
 routes.add(templatesRoute);
+routes.add(servicesRoute);
 
 app.inject('db', db);
 app.setRoutes(routes);

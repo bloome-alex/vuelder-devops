@@ -1,14 +1,17 @@
 import { renderAppBar } from "./components/appBarComponent.js";
 import { renderImagePage } from "./components/imagePageComponent.js";
+import { renderServicePage } from "./components/servicePageComponent.js";
 import { renderSidebar } from "./components/sidebarComponent.js";
 import { renderTemplatePage } from "./components/templatePageComponent.js";
 import { createImageProvider } from "./providers/imageProvider.js";
 import { getImages } from "./services/imageService.js";
+import { createService, deleteService, getServices, updateService } from "./services/serviceService.js";
 import { createTemplate, deleteTemplate, getTemplates, updateTemplate } from "./services/templateService.js";
 
 const content = document.querySelector(".content");
 const imageService = { getImages };
 const templateService = { getTemplates, createTemplate, updateTemplate, deleteTemplate };
+const serviceService = { getServices, createService, updateService, deleteService };
 
 renderAppBar(document.querySelector(".appbar"));
 
@@ -23,6 +26,11 @@ function renderRoute() {
 
   if (route === "templates") {
     renderTemplatePage(content, { templateService, imageService });
+    return;
+  }
+
+  if (route === "services") {
+    renderServicePage(content, { serviceService, templateService });
     return;
   }
 

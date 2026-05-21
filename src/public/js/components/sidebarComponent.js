@@ -1,6 +1,7 @@
 const navigationItems = [
   { label: "Imágenes", icon: "▦", route: "images" },
-  { label: "Plantillas", icon: "▣", route: "templates" }
+  { label: "Plantillas", icon: "▣", route: "templates" },
+  { label: "Services", icon: "▤", route: "services" }
 ];
 
 export function renderSidebar(container, activeRoute = "images") {

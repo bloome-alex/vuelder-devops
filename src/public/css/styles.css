@@ -554,6 +554,16 @@ button:disabled {
   color: #b42318;
 }
 
+.detail-json {
+  margin: 0;
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fbfdff;
+  color: var(--text);
+}
+
 @media (max-width: 860px) {
   .sidebar {
     width: 78px;
