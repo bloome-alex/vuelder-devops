@@ -33,6 +33,8 @@ Crear una skill si el cambio ensena un procedimiento que se repetira, por ejempl
 
 - Crear un nuevo modulo.
 - Agregar un endpoint completo.
+- Crear un ABM, CRUD o pantalla administrativa reutilizable.
+- Implementar patrones de UI/UX con formularios, loadings, validaciones, confirmaciones o toasts.
 - Integrar un servicio Docker.
 - Agregar una plantilla Docker Compose.
 - Implementar gestion de logs.

@@ -52,6 +52,7 @@ La aplicacion debe permitir visualizar logs, consultar variables de entorno acti
 - Toda variable de entorno declarada debe documentarse en `.env.example`.
 - Crear o actualizar documentacion en `/docs` para funcionalidades nuevas.
 - Crear o actualizar una skill en `.agent/skills` cuando el desarrollo cree una practica repetible.
+- Para ABMs o CRUDs administrativos, aplicar `.agent/skills/create-abm.md` y `.agent/skills/admin-ui-ux.md`.
 - Crear scripts en `/scripts` o `.agent/scripts` solo cuando automaticen una tarea real y recurrente.
 - Mantener tests en `/tests` alineados con la estructura modular.
 - Al modificar una clase injectable, actualizar su interface correspondiente y verificar que las clases integradas con ese contrato no se rompan.

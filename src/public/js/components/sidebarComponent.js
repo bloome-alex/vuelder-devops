@@ -1,8 +1,9 @@
 const navigationItems = [
-  { label: "Imágenes", icon: "▦", active: true }
+  { label: "Imágenes", icon: "▦", route: "images" },
+  { label: "Plantillas", icon: "▣", route: "templates" }
 ];
 
-export function renderSidebar(container) {
+export function renderSidebar(container, activeRoute = "images") {
   container.innerHTML = `
     <div class="brand">
       <div class="brand-icon">D</div>
@@ -11,7 +12,7 @@ export function renderSidebar(container) {
 
     <div class="nav-title">Principal</div>
     ${navigationItems.map(item => `
-      <a class="nav-link${item.active ? " active" : ""}" href="#">
+      <a class="nav-link${item.route === activeRoute ? " active" : ""}" href="#${item.route}">
         <span class="nav-icon">${item.icon}</span>
         <span class="nav-label">${item.label}</span>
       </a>
