@@ -1,9 +1,11 @@
 import express, { Router } from 'express';
+import path from 'node:path';
 import { IDatabaseConnection, IRoutes } from '../interfaces';
 import { Logger } from '../utils/Logger';
 
 export class Server {
   private app = express();
+  private publicPath = path.resolve(process.cwd(), 'src/public');
   private server: ReturnType<typeof this.app.listen> | null = null;
   private dependencies = new Map<string, IDatabaseConnection>();
   private routes: IRoutes | null = null;
@@ -42,6 +44,7 @@ export class Server {
     this.validateDependencies();
 
     this.app.use(express.json());
+    this.app.use(express.static(this.publicPath));
 
     const router = this.routes!.getRoutes();
     this.app.use('/api', router);

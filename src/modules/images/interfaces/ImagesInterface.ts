@@ -1,6 +1,11 @@
 export interface IImageRepository {
   repository: string;
-  images: string[];
+  images: IImageTag[];
+}
+
+export interface IImageTag {
+  name: string;
+  createdAt: string | null;
 }
 
 export interface IDockerCatalogResponse {
@@ -10,6 +15,16 @@ export interface IDockerCatalogResponse {
 export interface IDockerTagsResponse {
   name: string;
   tags?: string[] | null;
+}
+
+export interface IDockerManifestResponse {
+  config?: {
+    digest?: string;
+  };
+}
+
+export interface IDockerConfigResponse {
+  created?: string;
 }
 
 export interface IImagesService {

@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DevOps</title>
+  <style>
+    :root {
+      --blue-900: #0f2f57;
+      --blue-800: #143d70;
+      --blue-700: #185493;
+      --blue-600: #1d6fd0;
+      --blue-100: #eaf3ff;
+      --blue-50: #f5f9ff;
+      --border: #d7e3f4;
+      --text: #172033;
+      --muted: #6b7890;
+      --white: #ffffff;
+      --shadow: 0 8px 24px rgba(15, 47, 87, 0.08);
+      --radius: 5px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background: var(--blue-50);
+    }
+
+    .layout {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      width: 250px;
+      background: linear-gradient(180deg, var(--blue-900), var(--blue-800));
+      color: var(--white);
+      padding: 22px 16px;
+      position: fixed;
+      inset: 0 auto 0 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 8px 24px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+      margin-bottom: 18px;
+    }
+
+    .brand-icon {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: var(--radius);
+      font-weight: 800;
+    }
+
+    .brand-text {
+      font-size: 18px;
+      font-weight: 750;
+      letter-spacing: 0.2px;
+    }
+
+    .nav-title {
+      color: rgba(255, 255, 255, 0.58);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      padding: 10px 10px 8px;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      color: rgba(255, 255, 255, 0.82);
+      text-decoration: none;
+      padding: 12px 10px;
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-weight: 600;
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+
+    .nav-link:hover,
+    .nav-link.active {
+      color: var(--white);
+      background: rgba(255, 255, 255, 0.14);
+    }
+
+    .nav-icon {
+      width: 18px;
+      text-align: center;
+    }
+
+    .main {
+      width: 100%;
+      margin-left: 250px;
+      min-height: 100vh;
+    }
+
+    .appbar {
+      height: 68px;
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 30px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      box-shadow: 0 4px 16px rgba(15, 47, 87, 0.04);
+    }
+
+    .appbar h1 {
+      margin: 0;
+      color: var(--blue-900);
+      font-size: 22px;
+      font-weight: 800;
+    }
+
+    .appbar-badge {
+      color: var(--blue-700);
+      background: var(--blue-100);
+      border: 1px solid var(--border);
+      padding: 7px 10px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .content {
+      padding: 30px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .section-header h2 {
+      margin: 0 0 5px;
+      font-size: 24px;
+      color: var(--blue-900);
+    }
+
+    .section-header p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .panel {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 18px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, #ffffff, #fbfdff);
+    }
+
+    .search {
+      position: relative;
+      width: min(430px, 100%);
+    }
+
+    .search input {
+      width: 100%;
+      height: 42px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0 14px 0 40px;
+      font-size: 14px;
+      outline: none;
+      color: var(--text);
+      background: var(--white);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .search input:focus {
+      border-color: var(--blue-600);
+      box-shadow: 0 0 0 3px rgba(29, 111, 208, 0.12);
+    }
+
+    .search span {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .summary {
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead {
+      background: var(--blue-100);
+    }
+
+    th,
+    td {
+      padding: 15px 18px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+    }
+
+    th {
+      color: var(--blue-900);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 800;
+    }
+
+    tbody tr:hover {
+      background: #f8fbff;
+    }
+
+    .image-name {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 750;
+      color: var(--blue-900);
+    }
+
+    .image-chip {
+      width: 31px;
+      height: 31px;
+      display: grid;
+      place-items: center;
+      color: var(--blue-700);
+      background: var(--blue-100);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 15px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 8px;
+      background: #eef6ff;
+      color: var(--blue-700);
+      border: 1px solid #cfe3ff;
+      border-radius: var(--radius);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .digest {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .pagination {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      padding: 16px 18px;
+      background: #fbfdff;
+    }
+
+    .pagination-info {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .pagination-actions {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    button {
+      min-width: 38px;
+      height: 36px;
+      border: 1px solid var(--border);
+      background: var(--white);
+      color: var(--blue-800);
+      border-radius: var(--radius);
+      font-weight: 800;
+      cursor: pointer;
+      transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    }
+
+    button:hover:not(:disabled),
+    button.active {
+      background: var(--blue-700);
+      color: var(--white);
+      border-color: var(--blue-700);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.45;
+    }
+
+    .empty-state {
+      display: none;
+      padding: 42px 18px;
+      text-align: center;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    @media (max-width: 860px) {
+      .sidebar {
+        width: 78px;
+        padding: 18px 10px;
+      }
+
+      .brand-text,
+      .nav-title,
+      .nav-label {
+        display: none;
+      }
+
+      .brand {
+        justify-content: center;
+        padding: 0 0 18px;
+      }
+
+      .nav-link {
+        justify-content: center;
+      }
+
+      .main {
+        margin-left: 78px;
+      }
+
+      .appbar,
+      .content {
+        padding-left: 18px;
+        padding-right: 18px;
+      }
+
+      .section-header,
+      .toolbar,
+      .pagination {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .summary {
+        white-space: normal;
+      }
+
+      table {
+        min-width: 760px;
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon">D</div>
+        <div class="brand-text">DevOps</div>
+      </div>
+
+      <div class="nav-title">Principal</div>
+      <a class="nav-link active" href="#">
+        <span class="nav-icon">▦</span>
+        <span class="nav-label">Imágenes</span>
+      </a>
+    </aside>
+
+    <main class="main">
+      <header class="appbar">
+        <h1>DevOps</h1>
+        <div class="appbar-badge">Docker Images</div>
+      </header>
+
+      <section class="content">
+        <div class="section-header">
+          <div>
+            <h2>Imágenes</h2>
+            <p>Listado de imágenes Docker disponibles en el entorno.</p>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="toolbar">
+            <div class="search">
+              <span>⌕</span>
+              <input id="searchInput" type="search" placeholder="Buscar por nombre, tag o repositorio..." />
+            </div>
+            <div id="summary" class="summary"></div>
+          </div>
+
+          <div id="emptyState" class="empty-state">
+            No se encontraron imágenes con el filtro ingresado.
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Imagen</th>
+                  <th>Repositorio</th>
+                  <th>Tag</th>
+                  <th>Tamaño</th>
+                  <th>Actualizada</th>
+                  <th>Digest</th>
+                </tr>
+              </thead>
+              <tbody id="imagesTable"></tbody>
+            </table>
+          </div>
+
+          <div class="pagination">
+            <div id="paginationInfo" class="pagination-info"></div>
+            <div class="pagination-actions">
+              <button id="prevBtn" type="button">‹</button>
+              <div id="pageButtons" class="pagination-actions"></div>
+              <button id="nextBtn" type="button">›</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const images = [
+      { name: "nginx", repository: "docker.io/library/nginx", tag: "1.25-alpine", size: "43 MB", updated: "Hace 2 horas", digest: "sha256:a82f...9c1b" },
+      { name: "postgres", repository: "docker.io/library/postgres", tag: "16", size: "432 MB", updated: "Hace 5 horas", digest: "sha256:0f3a...1e77" },
+      { name: "redis", repository: "docker.io/library/redis", tag: "7.2", size: "117 MB", updated: "Ayer", digest: "sha256:c91d...8aa4" },
+      { name: "node", repository: "docker.io/library/node", tag: "20-alpine", size: "179 MB", updated: "Ayer", digest: "sha256:f712...51de" },
+      { name: "api-gateway", repository: "registry.local/devops/api-gateway", tag: "v2.8.1", size: "96 MB", updated: "Hace 2 días", digest: "sha256:7b22...4ad1" },
+      { name: "auth-service", repository: "registry.local/devops/auth-service", tag: "v1.14.0", size: "121 MB", updated: "Hace 3 días", digest: "sha256:b919...a412" },
+      { name: "worker-jobs", repository: "registry.local/devops/worker-jobs", tag: "v3.2.5", size: "155 MB", updated: "Hace 4 días", digest: "sha256:4f00...7d89" },
+      { name: "grafana", repository: "docker.io/grafana/grafana", tag: "10.4.2", size: "389 MB", updated: "Hace 1 semana", digest: "sha256:bd41...07cc" },
+      { name: "prometheus", repository: "quay.io/prometheus/prometheus", tag: "v2.51.0", size: "244 MB", updated: "Hace 1 semana", digest: "sha256:3ea9...fa17" },
+      { name: "mongo", repository: "docker.io/library/mongo", tag: "7", size: "756 MB", updated: "Hace 2 semanas", digest: "sha256:1c33...04bd" },
+      { name: "rabbitmq", repository: "docker.io/library/rabbitmq", tag: "3-management", size: "255 MB", updated: "Hace 2 semanas", digest: "sha256:e515...f08e" },
+      { name: "frontend-web", repository: "registry.local/devops/frontend-web", tag: "v5.9.3", size: "88 MB", updated: "Hace 3 semanas", digest: "sha256:90ad...220f" }
+    ];
+
+    const rowsPerPage = 6;
+    let currentPage = 1;
+    let filteredImages = [...images];
+
+    const searchInput = document.getElementById("searchInput");
+    const imagesTable = document.getElementById("imagesTable");
+    const summary = document.getElementById("summary");
+    const paginationInfo = document.getElementById("paginationInfo");
+    const pageButtons = document.getElementById("pageButtons");
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    const emptyState = document.getElementById("emptyState");
+
+    function render() {
+      const totalPages = Math.max(1, Math.ceil(filteredImages.length / rowsPerPage));
+      currentPage = Math.min(currentPage, totalPages);
+
+      const start = (currentPage - 1) * rowsPerPage;
+      const end = start + rowsPerPage;
+      const pageItems = filteredImages.slice(start, end);
+
+      imagesTable.innerHTML = pageItems.map(image => `
+        <tr>
+          <td>
+            <div class="image-name">
+              <span class="image-chip">⬢</span>
+              ${image.name}
+            </div>
+          </td>
+          <td>${image.repository}</td>
+          <td><span class="tag">${image.tag}</span></td>
+          <td>${image.size}</td>
+          <td>${image.updated}</td>
+          <td class="digest">${image.digest}</td>
+        </tr>
+      `).join("");
+
+      emptyState.style.display = filteredImages.length ? "none" : "block";
+      summary.textContent = `${filteredImages.length} imagen${filteredImages.length === 1 ? "" : "es"} encontrada${filteredImages.length === 1 ? "" : "s"}`;
+
+      const visibleStart = filteredImages.length ? start + 1 : 0;
+      const visibleEnd = Math.min(end, filteredImages.length);
+      paginationInfo.textContent = `Mostrando ${visibleStart}-${visibleEnd} de ${filteredImages.length}`;
+
+      pageButtons.innerHTML = "";
+      for (let page = 1; page <= totalPages; page++) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = page;
+        button.className = page === currentPage ? "active" : "";
+        button.addEventListener("click", () => {
+          currentPage = page;
+          render();
+        });
+        pageButtons.appendChild(button);
+      }
+
+      prevBtn.disabled = currentPage === 1;
+      nextBtn.disabled = currentPage === totalPages;
+    }
+
+    searchInput.addEventListener("input", event => {
+      const value = event.target.value.trim().toLowerCase();
+      filteredImages = images.filter(image =>
+        image.name.toLowerCase().includes(value) ||
+        image.repository.toLowerCase().includes(value) ||
+        image.tag.toLowerCase().includes(value)
+      );
+      currentPage = 1;
+      render();
+    });
+
+    prevBtn.addEventListener("click", () => {
+      if (currentPage > 1) {
+        currentPage--;
+        render();
+      }
+    });
+
+    nextBtn.addEventListener("click", () => {
+      const totalPages = Math.ceil(filteredImages.length / rowsPerPage);
+      if (currentPage < totalPages) {
+        currentPage++;
+        render();
+      }
+    });
+
+    render();
+  </script>
+</body>
+</html>

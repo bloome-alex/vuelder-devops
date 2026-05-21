@@ -1,5 +1,12 @@
 import Docker from 'dockerode';
-import { IDockerCatalogResponse, IDockerTagsResponse, IImageRepository } from '../interfaces/ImagesInterface';
+import {
+  IDockerCatalogResponse,
+  IDockerConfigResponse,
+  IDockerManifestResponse,
+  IDockerTagsResponse,
+  IImageRepository,
+  IImageTag,
+} from '../interfaces/ImagesInterface';
 
 type Injectable = object;
 
@@ -28,15 +35,67 @@ export class ImagesService {
       repositories.map(async (repository) => {
         const repositoryPath = repository.split('/').map(encodeURIComponent).join('/');
         const tags = await this.requestRegistry<IDockerTagsResponse>(`/v2/${repositoryPath}/tags/list`);
+        const images = await this.listTagsWithCreationDate(repositoryPath, tags.tags ?? []);
+
         return {
           repository,
-          images: tags.tags ?? [],
+          images,
         };
       }),
     );
   }
 
-  private async requestRegistry<T>(path: string): Promise<T> {
+  private async listTagsWithCreationDate(repositoryPath: string, tags: string[]): Promise<IImageTag[]> {
+    const images = await Promise.all(
+      tags.map(async (tag) => ({
+        name: tag,
+        createdAt: await this.getTagCreatedAt(repositoryPath, tag),
+      })),
+    );
+
+    return images.sort((current, next) => this.compareCreatedAtDesc(current.createdAt, next.createdAt));
+  }
+
+  private async getTagCreatedAt(repositoryPath: string, tag: string): Promise<string | null> {
+    try {
+      const manifest = await this.requestRegistry<IDockerManifestResponse>(`/v2/${repositoryPath}/manifests/${encodeURIComponent(tag)}`, {
+        Accept: [
+          'application/vnd.docker.distribution.manifest.v2+json',
+          'application/vnd.oci.image.manifest.v1+json',
+        ].join(', '),
+      });
+
+      if (!manifest.config?.digest) {
+        return null;
+      }
+
+      const config = await this.requestRegistry<IDockerConfigResponse>(
+        `/v2/${repositoryPath}/blobs/${manifest.config.digest}`,
+      );
+
+      return config.created ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  private compareCreatedAtDesc(current: string | null, next: string | null): number {
+    if (!current && !next) {
+      return 0;
+    }
+
+    if (!current) {
+      return 1;
+    }
+
+    if (!next) {
+      return -1;
+    }
+
+    return new Date(next).getTime() - new Date(current).getTime();
+  }
+
+  private async requestRegistry<T>(path: string, headers?: Record<string, string>): Promise<T> {
     const docker = this.getDockerClient();
 
     return new Promise<T>((resolve, reject) => {
@@ -44,6 +103,7 @@ export class ImagesService {
         {
           path,
           method: 'GET',
+          headers,
           statusCodes: {
             200: true,
           },
