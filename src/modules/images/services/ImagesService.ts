@@ -1,4 +1,3 @@
-import Docker from 'dockerode';
 import {
   IDockerCatalogResponse,
   IDockerConfigResponse,
@@ -9,10 +8,11 @@ import {
 } from '../interfaces/ImagesInterface';
 
 type Injectable = object;
+const REGISTRY_REQUEST_TIMEOUT_MS = 10000;
 
 export class ImagesService {
   private dependencies = new Map<string, Injectable>();
-  private docker: Docker | null = null;
+  private registryUrl: URL | null = null;
 
   inject(name: string, instance: Injectable): this {
     this.dependencies.set(name, instance);
@@ -31,32 +31,40 @@ export class ImagesService {
     const catalog = await this.requestRegistry<IDockerCatalogResponse>('/v2/_catalog');
     const repositories = catalog.repositories ?? [];
 
-    return Promise.all(
-      repositories.map(async (repository) => {
-        const repositoryPath = repository.split('/').map(encodeURIComponent).join('/');
-        const tags = await this.requestRegistry<IDockerTagsResponse>(`/v2/${repositoryPath}/tags/list`);
-        const images = await this.listTagsWithCreationDate(repositoryPath, tags.tags ?? []);
-
-        return {
-          repository,
-          images,
-        };
-      }),
+    const imagesByRepository = await Promise.all(
+      repositories.map(async (repository) => this.getRepositoryImages(repository)),
     );
+
+    return imagesByRepository;
   }
 
-  private async listTagsWithCreationDate(repositoryPath: string, tags: string[]): Promise<IImageTag[]> {
+  private async getRepositoryImages(repository: string): Promise<IImageRepository> {
+    try {
+      const repositoryPath = repository.split('/').map(encodeURIComponent).join('/');
+      const tags = await this.requestRegistry<IDockerTagsResponse>(`/v2/${repositoryPath}/tags/list`);
+      const images = await this.listTagsWithMetadata(repositoryPath, tags.tags ?? []);
+
+      return {
+        repository,
+        images,
+      };
+    } catch {
+      return {
+        repository,
+        images: [],
+      };
+    }
+  }
+
+  private async listTagsWithMetadata(repositoryPath: string, tags: string[]): Promise<IImageTag[]> {
     const images = await Promise.all(
-      tags.map(async (tag) => ({
-        name: tag,
-        createdAt: await this.getTagCreatedAt(repositoryPath, tag),
-      })),
+      tags.map(async (tag) => this.getTagMetadata(repositoryPath, tag)),
     );
 
     return images.sort((current, next) => this.compareCreatedAtDesc(current.createdAt, next.createdAt));
   }
 
-  private async getTagCreatedAt(repositoryPath: string, tag: string): Promise<string | null> {
+  private async getTagMetadata(repositoryPath: string, tag: string): Promise<IImageTag> {
     try {
       const manifest = await this.requestRegistry<IDockerManifestResponse>(`/v2/${repositoryPath}/manifests/${encodeURIComponent(tag)}`, {
         Accept: [
@@ -66,17 +74,39 @@ export class ImagesService {
       });
 
       if (!manifest.config?.digest) {
-        return null;
+        return {
+          name: tag,
+          createdAt: null,
+          digest: null,
+          size: this.getManifestSize(manifest),
+        };
       }
 
       const config = await this.requestRegistry<IDockerConfigResponse>(
         `/v2/${repositoryPath}/blobs/${manifest.config.digest}`,
       );
 
-      return config.created ?? null;
+      return {
+        name: tag,
+        createdAt: config.created ?? null,
+        digest: manifest.config.digest,
+        size: this.getManifestSize(manifest),
+      };
     } catch {
-      return null;
+      return {
+        name: tag,
+        createdAt: null,
+        digest: null,
+        size: null,
+      };
     }
+  }
+
+  private getManifestSize(manifest: IDockerManifestResponse): number | null {
+    const sizes = [manifest.config?.size, ...(manifest.layers ?? []).map((layer) => layer.size)];
+    const total = sizes.reduce<number>((sum, size) => sum + (size ?? 0), 0);
+
+    return total > 0 ? total : null;
   }
 
   private compareCreatedAtDesc(current: string | null, next: string | null): number {
@@ -96,38 +126,35 @@ export class ImagesService {
   }
 
   private async requestRegistry<T>(path: string, headers?: Record<string, string>): Promise<T> {
-    const docker = this.getDockerClient();
+    const registryUrl = this.getRegistryUrl();
+    const requestUrl = new URL(path, registryUrl);
 
-    return new Promise<T>((resolve, reject) => {
-      docker.modem.dial(
-        {
-          path,
-          method: 'GET',
-          headers,
-          statusCodes: {
-            200: true,
-          },
-        },
-        (error, result) => {
-          if (error) {
-            reject(error);
-            return;
-          }
+    let response: Response;
+    try {
+      response = await fetch(requestUrl, {
+        method: 'GET',
+        headers,
+        signal: AbortSignal.timeout(REGISTRY_REQUEST_TIMEOUT_MS),
+      });
+    } catch (error) {
+      throw new Error(`Docker registry request failed for ${path}: ${this.getErrorMessage(error)}`);
+    }
 
-          if (Buffer.isBuffer(result)) {
-            resolve(JSON.parse(result.toString()) as T);
-            return;
-          }
+    if (!response.ok) {
+      const body = await response.text().catch(() => '');
+      throw new Error(`Docker registry responded ${response.status} for ${path}${body ? `: ${body}` : ''}`);
+    }
 
-          resolve(result as T);
-        },
-      );
-    });
+    try {
+      return await response.json() as T;
+    } catch (error) {
+      throw new Error(`Docker registry returned invalid JSON for ${path}: ${this.getErrorMessage(error)}`);
+    }
   }
 
-  private getDockerClient(): Docker {
-    if (this.docker) {
-      return this.docker;
+  private getRegistryUrl(): URL {
+    if (this.registryUrl) {
+      return this.registryUrl;
     }
 
     const registryUrl = process.env.DOCKER_REGISTRY_URL;
@@ -141,12 +168,12 @@ export class ImagesService {
       throw new Error('DOCKER_REGISTRY_URL must use http or https protocol');
     }
 
-    this.docker = new Docker({
-      protocol,
-      host: url.hostname,
-      port: url.port || undefined,
-    });
+    this.registryUrl = url;
 
-    return this.docker;
+    return this.registryUrl;
+  }
+
+  private getErrorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : String(error);
   }
 }

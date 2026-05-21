@@ -5,7 +5,11 @@ export function createEmptyStateComponent(message) {
 
   return {
     element,
-    render(totalItems) {
+    render(totalItems, message = null) {
+      if (message) {
+        element.textContent = message;
+      }
+
       element.style.display = totalItems ? "none" : "block";
     }
   };

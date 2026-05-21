@@ -1,7 +1,9 @@
 export function createImageProvider({ imageService, rowsPerPage = 6 }) {
   let currentPage = 1;
   let searchTerm = "";
-  let images = imageService.getImages();
+  let images = [];
+  let loading = true;
+  let error = "";
   const subscribers = new Set();
 
   function getFilteredImages() {
@@ -31,6 +33,8 @@ export function createImageProvider({ imageService, rowsPerPage = 6 }) {
       totalPages,
       rowsPerPage,
       searchTerm,
+      loading,
+      error,
       totalItems: filteredImages.length,
       visibleStart: filteredImages.length ? start + 1 : 0,
       visibleEnd: Math.min(end, filteredImages.length),
@@ -42,6 +46,24 @@ export function createImageProvider({ imageService, rowsPerPage = 6 }) {
     const state = getState();
     subscribers.forEach(subscriber => subscriber(state));
   }
+
+  async function loadImages() {
+    loading = true;
+    error = "";
+    notify();
+
+    try {
+      images = await imageService.getImages();
+    } catch (loadError) {
+      images = [];
+      error = loadError instanceof Error ? loadError.message : "No se pudieron cargar las imágenes.";
+    } finally {
+      loading = false;
+      notify();
+    }
+  }
+
+  loadImages();
 
   return {
     subscribe(subscriber) {
@@ -74,8 +96,7 @@ export function createImageProvider({ imageService, rowsPerPage = 6 }) {
       }
     },
     refresh() {
-      images = imageService.getImages();
-      notify();
+      return loadImages();
     }
   };
 }

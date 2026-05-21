@@ -1,17 +1,27 @@
+function escapeHtml(value) {
+  return String(value).replace(/[&<>'"]/g, character => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "'": "&#39;",
+    '"': "&quot;"
+  })[character]);
+}
+
 function renderImageRow(image) {
   return `
     <tr>
       <td>
         <div class="image-name">
           <span class="image-chip">⬢</span>
-          ${image.name}
+          ${escapeHtml(image.name)}
         </div>
       </td>
-      <td>${image.repository}</td>
-      <td><span class="tag">${image.tag}</span></td>
-      <td>${image.size}</td>
-      <td>${image.updated}</td>
-      <td class="digest">${image.digest}</td>
+      <td>${escapeHtml(image.repository)}</td>
+      <td><span class="tag">${escapeHtml(image.tag)}</span></td>
+      <td>${escapeHtml(image.size)}</td>
+      <td>${escapeHtml(image.updated)}</td>
+      <td class="digest">${escapeHtml(image.digest)}</td>
     </tr>
   `;
 }

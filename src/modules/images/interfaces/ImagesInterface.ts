@@ -6,6 +6,8 @@ export interface IImageRepository {
 export interface IImageTag {
   name: string;
   createdAt: string | null;
+  digest: string | null;
+  size: number | null;
 }
 
 export interface IDockerCatalogResponse {
@@ -20,7 +22,11 @@ export interface IDockerTagsResponse {
 export interface IDockerManifestResponse {
   config?: {
     digest?: string;
+    size?: number;
   };
+  layers?: Array<{
+    size?: number;
+  }>;
 }
 
 export interface IDockerConfigResponse {

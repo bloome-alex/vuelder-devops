@@ -1,18 +1,86 @@
-const images = [
-  { name: "nginx", repository: "docker.io/library/nginx", tag: "1.25-alpine", size: "43 MB", updated: "Hace 2 horas", digest: "sha256:a82f...9c1b" },
-  { name: "postgres", repository: "docker.io/library/postgres", tag: "16", size: "432 MB", updated: "Hace 5 horas", digest: "sha256:0f3a...1e77" },
-  { name: "redis", repository: "docker.io/library/redis", tag: "7.2", size: "117 MB", updated: "Ayer", digest: "sha256:c91d...8aa4" },
-  { name: "node", repository: "docker.io/library/node", tag: "20-alpine", size: "179 MB", updated: "Ayer", digest: "sha256:f712...51de" },
-  { name: "api-gateway", repository: "registry.local/devops/api-gateway", tag: "v2.8.1", size: "96 MB", updated: "Hace 2 días", digest: "sha256:7b22...4ad1" },
-  { name: "auth-service", repository: "registry.local/devops/auth-service", tag: "v1.14.0", size: "121 MB", updated: "Hace 3 días", digest: "sha256:b919...a412" },
-  { name: "worker-jobs", repository: "registry.local/devops/worker-jobs", tag: "v3.2.5", size: "155 MB", updated: "Hace 4 días", digest: "sha256:4f00...7d89" },
-  { name: "grafana", repository: "docker.io/grafana/grafana", tag: "10.4.2", size: "389 MB", updated: "Hace 1 semana", digest: "sha256:bd41...07cc" },
-  { name: "prometheus", repository: "quay.io/prometheus/prometheus", tag: "v2.51.0", size: "244 MB", updated: "Hace 1 semana", digest: "sha256:3ea9...fa17" },
-  { name: "mongo", repository: "docker.io/library/mongo", tag: "7", size: "756 MB", updated: "Hace 2 semanas", digest: "sha256:1c33...04bd" },
-  { name: "rabbitmq", repository: "docker.io/library/rabbitmq", tag: "3-management", size: "255 MB", updated: "Hace 2 semanas", digest: "sha256:e515...f08e" },
-  { name: "frontend-web", repository: "registry.local/devops/frontend-web", tag: "v5.9.3", size: "88 MB", updated: "Hace 3 semanas", digest: "sha256:90ad...220f" }
-];
+function formatBytes(bytes) {
+  if (!bytes) {
+    return "-";
+  }
 
-export function getImages() {
-  return [...images];
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+  const value = bytes / 1024 ** index;
+
+  return `${value >= 10 ? value.toFixed(0) : value.toFixed(1)} ${units[index]}`;
+}
+
+function formatDate(value) {
+  if (!value) {
+    return "-";
+  }
+
+  return new Intl.DateTimeFormat("es", {
+    dateStyle: "medium",
+    timeStyle: "short"
+  }).format(new Date(value));
+}
+
+function formatDigest(value) {
+  if (!value) {
+    return "-";
+  }
+
+  return value.length > 20 ? `${value.slice(0, 12)}...${value.slice(-8)}` : value;
+}
+
+function getImageName(repository) {
+  return repository.split("/").pop() || repository;
+}
+
+function normalizeImages(repositories) {
+  return repositories.flatMap(({ repository, images }) =>
+    (images || []).map(image => ({
+      name: getImageName(repository),
+      repository,
+      tag: image.name,
+      size: formatBytes(image.size),
+      updated: formatDate(image.createdAt),
+      digest: formatDigest(image.digest)
+    }))
+  );
+}
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = 15000) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export async function getImages() {
+  let response;
+
+  try {
+    response = await fetchWithTimeout("/api/images");
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error("La carga de imágenes tardó demasiado. Revisa la conexión con el backend.");
+    }
+
+    throw new Error("No se pudo conectar con el backend de imágenes.");
+  }
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => null);
+    throw new Error(error?.message || "No se pudieron cargar las imágenes desde el backend.");
+  }
+
+  try {
+    return normalizeImages(await response.json());
+  } catch {
+    throw new Error("El backend devolvió una respuesta inválida para el listado de imágenes.");
+  }
 }

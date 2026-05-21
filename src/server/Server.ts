@@ -45,9 +45,18 @@ export class Server {
 
     this.app.use(express.json());
     this.app.use(express.static(this.publicPath));
+    this.app.use('/api', (req, res, next) => {
+      res.on('finish', () => {
+        Logger.info(`API request: ${req.method} ${req.originalUrl} ${res.statusCode}`);
+      });
+      next();
+    });
 
     const router = this.routes!.getRoutes();
     this.app.use('/api', router);
+    this.app.use('/api', (_req, res) => {
+      res.status(404).json({ message: 'API route not found' });
+    });
 
     const db = this.get<IDatabaseConnection>('db');
     await db.connect();

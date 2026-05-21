@@ -35,8 +35,10 @@ export function renderImagePage(container, imageProvider) {
 
   imageProvider.subscribe(state => {
     imageTable.render(state.pageItems);
-    emptyState.render(state.totalItems);
+    emptyState.render(state.loading ? 1 : state.totalItems, state.error || "No se encontraron imágenes con el filtro ingresado.");
     pagination.render(state);
-    summary.textContent = `${state.totalItems} imagen${state.totalItems === 1 ? "" : "es"} encontrada${state.totalItems === 1 ? "" : "s"}`;
+    summary.textContent = state.loading
+      ? "Cargando imágenes..."
+      : `${state.totalItems} imagen${state.totalItems === 1 ? "" : "es"} encontrada${state.totalItems === 1 ? "" : "s"}`;
   });
 }

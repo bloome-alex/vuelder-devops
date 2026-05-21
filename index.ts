@@ -5,6 +5,7 @@ import { RouterMerger } from './src/utils/RouterMerger';
 import { ImagesController } from './src/modules/images/controllers/ImagesController';
 import { ImagesService } from './src/modules/images/services/ImagesService';
 import { ImagesRoute } from './src/modules/images/routes/ImagesRoute';
+import { Logger } from './src/utils/Logger';
 
 const app = new Server();
 const db = DatabaseConnection.getInstance();
@@ -19,4 +20,7 @@ routes.add(imagesRoute);
 app.inject('db', db);
 app.setRoutes(routes);
 
-app.start(Number(process.env.PORT) || 3000);
+app.start(Number(process.env.PORT) || 3000).catch((error) => {
+  Logger.error('Server failed to start', error instanceof Error ? error.message : String(error));
+  process.exit(1);
+});
