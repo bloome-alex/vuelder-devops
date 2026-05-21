@@ -104,6 +104,11 @@ export function createDeployProvider({ deployService, rowsPerPage = 10 }) {
     await loadTasks(serviceId);
   }
 
+  async function undeployService(serviceId) {
+    await deployService.undeployService(serviceId);
+    await loadServices();
+  }
+
   async function removeService(serviceId) {
     await deployService.deleteService(serviceId);
     await loadServices();
@@ -167,6 +172,9 @@ export function createDeployProvider({ deployService, rowsPerPage = 10 }) {
     },
     removeService(serviceId) {
       return removeService(serviceId);
+    },
+    undeploy(serviceId) {
+      return undeployService(serviceId);
     },
     inspectService(serviceId) {
       return inspectService(serviceId);

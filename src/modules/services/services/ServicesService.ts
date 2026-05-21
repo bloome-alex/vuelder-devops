@@ -372,6 +372,21 @@ export class ServicesService {
     }));
   }
 
+  async undeployService(serviceId: string): Promise<void> {
+    const containers = await this.docker.listContainers({
+      all: true,
+      filters: { label: [`vuelder.service.id=${serviceId}`] },
+    });
+
+    for (const item of containers) {
+      const container = this.docker.getContainer(item.Id);
+      if (item.State === 'running') {
+        await container.stop();
+      }
+      await container.remove({ force: true });
+    }
+  }
+
   async restartContainer(containerId: string): Promise<void> {
     const container = this.docker.getContainer(containerId);
     await container.restart();

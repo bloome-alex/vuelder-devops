@@ -118,6 +118,16 @@ export class ServicesController {
     }
   };
 
+  undeploy = async (req: Request<{ id: string }>, res: Response): Promise<void> => {
+    try {
+      const servicesService = this.get<IServicesService>('servicesService');
+      await servicesService.undeployService(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      this.handleError(res, error, 'Unexpected error undeploying service');
+    }
+  };
+
   restartTask = async (req: Request<{ id: string }>, res: Response): Promise<void> => {
     try {
       const servicesService = this.get<IServicesService>('servicesService');

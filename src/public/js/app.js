@@ -9,13 +9,13 @@ import { createDeployProvider } from "./providers/deployProvider.js";
 import { getImages, syncImages } from "./services/imageService.js";
 import { createService, deleteService, deployService, getServices, updateService } from "./services/serviceService.js";
 import { createTemplate, deleteTemplate, getTemplates, updateTemplate } from "./services/templateService.js";
-import { getServices as getDeployServices, getTasks, restartTask, removeTask, inspectTask, restartService as restartDeployService, deleteService as deleteDeployService, inspectService } from "./services/deployService.js";
+import { getServices as getDeployServices, getTasks, restartTask, removeTask, inspectTask, restartService as restartDeployService, deleteService as deleteDeployService, undeployService, inspectService } from "./services/deployService.js";
 
 const content = document.querySelector(".content");
 const imageService = { getImages, syncImages };
 const templateService = { getTemplates, createTemplate, updateTemplate, deleteTemplate };
 const serviceService = { getServices, createService, updateService, deleteService, deployService };
-const deployService2 = { getServices: getDeployServices, getTasks, restartTask, removeTask, inspectTask, restartService: restartDeployService, deleteService: deleteDeployService, inspectService };
+const deployService2 = { getServices: getDeployServices, getTasks, restartTask, removeTask, inspectTask, restartService: restartDeployService, deleteService: deleteDeployService, undeployService, inspectService };
 
 renderAppBar(document.querySelector(".appbar"));
 

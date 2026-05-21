@@ -248,13 +248,13 @@ export function renderDeployPage(container, deployProvider) {
       const serviceId = serviceDeleteBtn.dataset.serviceId;
       const service = deployProvider._state?.pageItems?.find(s => s.id === serviceId);
       createConfirmModal({
-        title: "Eliminar servicio",
-        message: `¿Eliminar definitivamente el servicio ${service?.name} y sus contenedores?`,
+        title: "Eliminar despliegue",
+        message: `¿Eliminar el despliegue de ${service?.name}? Esto detendra y eliminara sus contenedores.`,
         confirmText: "Eliminar",
         onConfirm: async () => {
           try {
-            await deployProvider.removeService(serviceId);
-            createToast(container, "Servicio eliminado.");
+            await deployProvider.undeploy(serviceId);
+            createToast(container, "Despliegue eliminado.");
           } catch (error) {
             createToast(container, error.message, "error");
           }

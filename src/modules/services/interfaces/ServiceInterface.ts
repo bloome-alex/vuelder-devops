@@ -32,6 +32,7 @@ export interface IServicesService {
   createService(payload: ServicePayload): Promise<Service>;
   updateService(id: string, payload: ServicePayload): Promise<Service | null>;
   deleteService(id: string): Promise<boolean>;
+  undeployService(id: string): Promise<void>;
   deployService(id: string, payload: ServiceDeployPayload): Promise<ServiceDeployResult | null>;
   getTasksByServiceId(serviceId: string): Promise<unknown[]>;
   restartContainer(containerId: string): Promise<void>;

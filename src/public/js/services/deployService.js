@@ -40,6 +40,10 @@ export function restartService(serviceId) {
   return request(`/api/services/${serviceId}/tasks`, { method: "POST" });
 }
 
+export function undeployService(serviceId) {
+  return request(`/api/services/${serviceId}/deploy`, { method: "DELETE" });
+}
+
 export function deleteService(serviceId) {
   return request(`/api/services/${serviceId}`, { method: "DELETE" });
 }
