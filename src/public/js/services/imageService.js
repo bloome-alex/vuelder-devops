@@ -84,3 +84,24 @@ export async function getImages() {
     throw new Error("El backend devolvió una respuesta inválida para el listado de imágenes.");
   }
 }
+
+export async function syncImages() {
+  let response;
+
+  try {
+    response = await fetchWithTimeout("/api/images/sync", { method: "POST" }, 60000);
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error("La actualización de imágenes tardó demasiado. Revisa la conexión con Docker.");
+    }
+
+    throw new Error("No se pudo conectar con el backend para actualizar imágenes.");
+  }
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => null);
+    throw new Error(error?.message || "No se pudieron actualizar las imágenes desde Docker.");
+  }
+
+  return response.json();
+}

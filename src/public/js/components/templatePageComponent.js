@@ -42,6 +42,10 @@ function createToast(container, message, type = "success") {
   setTimeout(() => toast.remove(), 3200);
 }
 
+function hasOpenModal() {
+  return Boolean(document.body.querySelector(".modal-backdrop"));
+}
+
 function validateTemplate(template) {
   const errors = [];
   const seenPorts = new Set();
@@ -154,6 +158,10 @@ function renderVolumeRow(item = {}) {
 }
 
 function createTemplateModal({ images, template, onSave, onClose }) {
+  if (hasOpenModal()) {
+    return;
+  }
+
   const current = cloneTemplate({ ...emptyTemplate, ...template });
   current.id = getTemplateId(current);
   const modal = document.createElement("div");
@@ -261,6 +269,10 @@ function createTemplateModal({ images, template, onSave, onClose }) {
 }
 
 function createConfirmModal({ title, message, confirmText = "Eliminar", onConfirm }) {
+  if (hasOpenModal()) {
+    return;
+  }
+
   const modal = document.createElement("div");
   modal.className = "modal-backdrop";
   modal.innerHTML = `
@@ -395,7 +407,7 @@ export function renderTemplatePage(container, { templateService, imageService })
     `;
   }
 
-  container.addEventListener("click", event => {
+  container.onclick = event => {
     if (event.target.closest(".create-template")) {
       openModal();
     }
@@ -428,7 +440,7 @@ export function renderTemplatePage(container, { templateService, imageService })
         })
       });
     }
-  });
+  };
 
   load();
 }

@@ -4,12 +4,12 @@ import { renderServicePage } from "./components/servicePageComponent.js";
 import { renderSidebar } from "./components/sidebarComponent.js";
 import { renderTemplatePage } from "./components/templatePageComponent.js";
 import { createImageProvider } from "./providers/imageProvider.js";
-import { getImages } from "./services/imageService.js";
+import { getImages, syncImages } from "./services/imageService.js";
 import { createService, deleteService, getServices, updateService } from "./services/serviceService.js";
 import { createTemplate, deleteTemplate, getTemplates, updateTemplate } from "./services/templateService.js";
 
 const content = document.querySelector(".content");
-const imageService = { getImages };
+const imageService = { getImages, syncImages };
 const templateService = { getTemplates, createTemplate, updateTemplate, deleteTemplate };
 const serviceService = { getServices, createService, updateService, deleteService };
 

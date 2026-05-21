@@ -4,8 +4,11 @@ import {
   IDockerManifestResponse,
   IDockerTagsResponse,
   IImageRepository,
+  IImageRecord,
+  IImageSyncResult,
   IImageTag,
 } from '../interfaces/ImagesInterface';
+import { ImageSchema } from '../schemas/ImageSchema';
 
 type Injectable = object;
 const REGISTRY_REQUEST_TIMEOUT_MS = 10000;
@@ -28,43 +31,81 @@ export class ImagesService {
   }
 
   async listImages(): Promise<IImageRepository[]> {
-    const catalog = await this.requestRegistry<IDockerCatalogResponse>('/v2/_catalog');
-    const repositories = catalog.repositories ?? [];
+    const images = await ImageSchema.find().sort({ repository: 1, createdAt: -1, name: 1 }).lean().exec();
+    const repositories = new Map<string, IImageTag[]>();
 
-    const imagesByRepository = await Promise.all(
-      repositories.map(async (repository) => this.getRepositoryImages(repository)),
-    );
+    for (const image of images) {
+      const tags = repositories.get(image.repository) ?? [];
+      tags.push({
+        name: image.name,
+        createdAt: image.createdAt,
+        digest: image.digest,
+        size: image.size,
+      });
+      repositories.set(image.repository, tags);
+    }
 
-    return imagesByRepository;
+    return [...repositories.entries()].map(([repository, repositoryImages]) => ({
+      repository,
+      images: repositoryImages,
+    }));
   }
 
-  private async getRepositoryImages(repository: string): Promise<IImageRepository> {
+  async syncImages(): Promise<IImageSyncResult> {
+    const catalog = await this.requestRegistry<IDockerCatalogResponse>('/v2/_catalog');
+    const repositories = catalog.repositories ?? [];
+    const imagesByRepository = await Promise.all(repositories.map(async (repository) => this.getNewRepositoryImages(repository)));
+    const images = imagesByRepository.flat();
+
+    if (images.length) {
+      await ImageSchema.bulkWrite(images.map((image) => ({
+        updateOne: {
+          filter: { repository: image.repository, name: image.name },
+          update: { $setOnInsert: image },
+          upsert: true,
+        },
+      })));
+    }
+
+    return {
+      repositories: repositories.length,
+      tags: imagesByRepository.reduce((total, repositoryImages) => total + repositoryImages.length, 0),
+      added: images.length,
+    };
+  }
+
+  private async getNewRepositoryImages(repository: string): Promise<IImageRecord[]> {
     try {
       const repositoryPath = repository.split('/').map(encodeURIComponent).join('/');
       const tags = await this.requestRegistry<IDockerTagsResponse>(`/v2/${repositoryPath}/tags/list`);
-      const images = await this.listTagsWithMetadata(repositoryPath, tags.tags ?? []);
+      const newTags = await this.filterNewTags(repository, tags.tags ?? []);
 
-      return {
-        repository,
-        images,
-      };
+      return this.listTagsWithMetadata(repository, repositoryPath, newTags);
     } catch {
-      return {
-        repository,
-        images: [],
-      };
+      return [];
     }
   }
 
-  private async listTagsWithMetadata(repositoryPath: string, tags: string[]): Promise<IImageTag[]> {
+  private async filterNewTags(repository: string, tags: string[]): Promise<string[]> {
+    if (!tags.length) {
+      return [];
+    }
+
+    const registeredImages = await ImageSchema.find({ repository, name: { $in: tags } }).select('name').lean().exec();
+    const registeredTags = new Set(registeredImages.map((image) => image.name));
+
+    return tags.filter((tag) => !registeredTags.has(tag));
+  }
+
+  private async listTagsWithMetadata(repository: string, repositoryPath: string, tags: string[]): Promise<IImageRecord[]> {
     const images = await Promise.all(
-      tags.map(async (tag) => this.getTagMetadata(repositoryPath, tag)),
+      tags.map(async (tag) => this.getTagMetadata(repository, repositoryPath, tag)),
     );
 
     return images.sort((current, next) => this.compareCreatedAtDesc(current.createdAt, next.createdAt));
   }
 
-  private async getTagMetadata(repositoryPath: string, tag: string): Promise<IImageTag> {
+  private async getTagMetadata(repository: string, repositoryPath: string, tag: string): Promise<IImageRecord> {
     try {
       const manifest = await this.requestRegistry<IDockerManifestResponse>(`/v2/${repositoryPath}/manifests/${encodeURIComponent(tag)}`, {
         Accept: [
@@ -75,10 +116,12 @@ export class ImagesService {
 
       if (!manifest.config?.digest) {
         return {
+          repository,
           name: tag,
           createdAt: null,
           digest: null,
           size: this.getManifestSize(manifest),
+          syncedAt: new Date(),
         };
       }
 
@@ -87,17 +130,21 @@ export class ImagesService {
       );
 
       return {
+        repository,
         name: tag,
         createdAt: config.created ?? null,
         digest: manifest.config.digest,
         size: this.getManifestSize(manifest),
+        syncedAt: new Date(),
       };
     } catch {
       return {
+        repository,
         name: tag,
         createdAt: null,
         digest: null,
         size: null,
+        syncedAt: new Date(),
       };
     }
   }

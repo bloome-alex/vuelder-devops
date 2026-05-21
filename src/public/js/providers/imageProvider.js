@@ -3,7 +3,9 @@ export function createImageProvider({ imageService, rowsPerPage = 6 }) {
   let searchTerm = "";
   let images = [];
   let loading = true;
+  let syncing = false;
   let error = "";
+  let syncMessage = "";
   const subscribers = new Set();
 
   function getFilteredImages() {
@@ -34,7 +36,9 @@ export function createImageProvider({ imageService, rowsPerPage = 6 }) {
       rowsPerPage,
       searchTerm,
       loading,
+      syncing,
       error,
+      syncMessage,
       totalItems: filteredImages.length,
       visibleStart: filteredImages.length ? start + 1 : 0,
       visibleEnd: Math.min(end, filteredImages.length),
@@ -59,6 +63,24 @@ export function createImageProvider({ imageService, rowsPerPage = 6 }) {
       error = loadError instanceof Error ? loadError.message : "No se pudieron cargar las imágenes.";
     } finally {
       loading = false;
+      notify();
+    }
+  }
+
+  async function syncImages() {
+    syncing = true;
+    error = "";
+    syncMessage = "";
+    notify();
+
+    try {
+      const result = await imageService.syncImages();
+      syncMessage = `${result.added} imagen${result.added === 1 ? "" : "es"} nueva${result.added === 1 ? "" : "s"} agregada${result.added === 1 ? "" : "s"}.`;
+      await loadImages();
+    } catch (syncError) {
+      error = syncError instanceof Error ? syncError.message : "No se pudieron actualizar las imágenes.";
+    } finally {
+      syncing = false;
       notify();
     }
   }
@@ -97,6 +119,9 @@ export function createImageProvider({ imageService, rowsPerPage = 6 }) {
     },
     refresh() {
       return loadImages();
+    },
+    syncImages() {
+      return syncImages();
     }
   };
 }

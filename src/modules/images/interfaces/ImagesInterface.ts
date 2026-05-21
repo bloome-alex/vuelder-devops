@@ -3,11 +3,22 @@ export interface IImageRepository {
   images: IImageTag[];
 }
 
+export interface IImageRecord extends IImageTag {
+  repository: string;
+  syncedAt: Date;
+}
+
 export interface IImageTag {
   name: string;
   createdAt: string | null;
   digest: string | null;
   size: number | null;
+}
+
+export interface IImageSyncResult {
+  repositories: number;
+  tags: number;
+  added: number;
 }
 
 export interface IDockerCatalogResponse {
@@ -35,4 +46,5 @@ export interface IDockerConfigResponse {
 
 export interface IImagesService {
   listImages(): Promise<IImageRepository[]>;
+  syncImages(): Promise<IImageSyncResult>;
 }

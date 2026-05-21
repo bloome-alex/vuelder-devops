@@ -44,6 +44,10 @@ function createToast(container, message, type = "success") {
   setTimeout(() => toast.remove(), 3400);
 }
 
+function hasOpenModal() {
+  return Boolean(document.body.querySelector(".modal-backdrop"));
+}
+
 function findTemplate(templates, id) {
   return templates.find(template => getTemplateId(template) === id);
 }
@@ -262,6 +266,10 @@ function syncVolumes(form, template, container) {
 }
 
 function createServiceModal({ templates, service, onSave, onClose, container }) {
+  if (hasOpenModal()) {
+    return;
+  }
+
   const current = cloneService({ ...emptyService, ...service });
   current.id = getServiceId(current);
   const modal = document.createElement("div");
@@ -410,6 +418,10 @@ function createServiceModal({ templates, service, onSave, onClose, container }) 
 }
 
 function createDetailModal({ service, template }) {
+  if (hasOpenModal()) {
+    return;
+  }
+
   const modal = document.createElement("div");
   modal.className = "modal-backdrop";
   modal.innerHTML = `
@@ -442,6 +454,10 @@ function createDetailModal({ service, template }) {
 }
 
 function createConfirmModal({ title, message, confirmText = "Eliminar", onConfirm }) {
+  if (hasOpenModal()) {
+    return;
+  }
+
   const modal = document.createElement("div");
   modal.className = "modal-backdrop";
   modal.innerHTML = `
@@ -564,7 +580,7 @@ export function renderServicePage(container, { serviceService, templateService }
     `;
   }
 
-  container.addEventListener("click", event => {
+  container.onclick = event => {
     if (event.target.closest(".create-service")) {
       openModal();
     }
@@ -597,7 +613,7 @@ export function renderServicePage(container, { serviceService, templateService }
         })
       });
     }
-  });
+  };
 
   load();
 }

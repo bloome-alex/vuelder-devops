@@ -30,4 +30,16 @@ export class ImagesController {
       });
     }
   };
+
+  sync = async (_req: Request, res: Response): Promise<void> => {
+    try {
+      const imagesService = this.get<IImagesService>('imagesService');
+      const result = await imagesService.syncImages();
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({
+        message: error instanceof Error ? error.message : 'Unexpected error syncing images',
+      });
+    }
+  };
 }

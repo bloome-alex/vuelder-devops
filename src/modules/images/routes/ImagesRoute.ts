@@ -34,6 +34,7 @@ export class ImagesRoute implements IRoutes {
     const imagesController = this.get<ImagesController>('imagesController');
 
     router.get('/images', imagesController.index);
+    router.post('/images/sync', imagesController.sync);
 
     for (const route of this.routes) {
       router.use(route.getRoutes());

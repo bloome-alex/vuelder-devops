@@ -8,8 +8,9 @@ export function renderImagePage(container, imageProvider) {
     <div class="section-header">
       <div>
         <h2>Imágenes</h2>
-        <p>Listado de imágenes Docker disponibles en el entorno.</p>
+        <p>Listado de imágenes Docker registradas en la base de datos.</p>
       </div>
+      <button class="button primary" type="button" data-sync-images>Actualizar imágenes con Docker</button>
     </div>
 
     <div class="panel">
@@ -19,6 +20,7 @@ export function renderImagePage(container, imageProvider) {
 
   const panel = container.querySelector(".panel");
   const toolbar = container.querySelector(".toolbar");
+  const syncButton = container.querySelector("[data-sync-images]");
   const summary = document.createElement("div");
   const search = createSearchComponent({ onSearch: value => imageProvider.setSearchTerm(value) });
   const emptyState = createEmptyStateComponent("No se encontraron imágenes con el filtro ingresado.");
@@ -33,12 +35,16 @@ export function renderImagePage(container, imageProvider) {
   toolbar.append(search, summary);
   panel.append(emptyState.element, imageTable.element, pagination.element);
 
+  syncButton.addEventListener("click", () => imageProvider.syncImages());
+
   imageProvider.subscribe(state => {
     imageTable.render(state.pageItems);
     emptyState.render(state.loading ? 1 : state.totalItems, state.error || "No se encontraron imágenes con el filtro ingresado.");
     pagination.render(state);
+    syncButton.disabled = state.syncing;
+    syncButton.textContent = state.syncing ? "Actualizando..." : "Actualizar imágenes con Docker";
     summary.textContent = state.loading
       ? "Cargando imágenes..."
-      : `${state.totalItems} imagen${state.totalItems === 1 ? "" : "es"} encontrada${state.totalItems === 1 ? "" : "s"}`;
+      : state.syncMessage || `${state.totalItems} imagen${state.totalItems === 1 ? "" : "es"} encontrada${state.totalItems === 1 ? "" : "s"}`;
   });
 }
