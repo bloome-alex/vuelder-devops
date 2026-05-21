@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { IServicesService, ServicePayload } from '../interfaces/ServiceInterface';
+import { IServicesService, ServiceDeployPayload, ServicePayload } from '../interfaces/ServiceInterface';
 
 type Injectable = object;
 
@@ -82,6 +82,22 @@ export class ServicesController {
       res.status(204).send();
     } catch (error) {
       this.handleError(res, error, 'Unexpected error deleting service');
+    }
+  };
+
+  deploy = async (req: Request<{ id: string }, object, ServiceDeployPayload>, res: Response): Promise<void> => {
+    try {
+      const servicesService = this.get<IServicesService>('servicesService');
+      const result = await servicesService.deployService(req.params.id, req.body);
+
+      if (!result) {
+        res.status(404).json({ message: 'Service not found' });
+        return;
+      }
+
+      res.json(result);
+    } catch (error) {
+      this.handleError(res, error, 'Unexpected error deploying service');
     }
   };
 

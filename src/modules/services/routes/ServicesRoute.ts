@@ -36,6 +36,7 @@ export class ServicesRoute implements IRoutes {
     router.get('/services', servicesController.index);
     router.get('/services/:id', servicesController.show);
     router.post('/services', servicesController.store);
+    router.post('/services/:id/deploy', servicesController.deploy);
     router.put('/services/:id', servicesController.update);
     router.delete('/services/:id', servicesController.destroy);
 

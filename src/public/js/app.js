@@ -5,13 +5,13 @@ import { renderSidebar } from "./components/sidebarComponent.js";
 import { renderTemplatePage } from "./components/templatePageComponent.js";
 import { createImageProvider } from "./providers/imageProvider.js";
 import { getImages, syncImages } from "./services/imageService.js";
-import { createService, deleteService, getServices, updateService } from "./services/serviceService.js";
+import { createService, deleteService, deployService, getServices, updateService } from "./services/serviceService.js";
 import { createTemplate, deleteTemplate, getTemplates, updateTemplate } from "./services/templateService.js";
 
 const content = document.querySelector(".content");
 const imageService = { getImages, syncImages };
 const templateService = { getTemplates, createTemplate, updateTemplate, deleteTemplate };
-const serviceService = { getServices, createService, updateService, deleteService };
+const serviceService = { getServices, createService, updateService, deleteService, deployService };
 
 renderAppBar(document.querySelector(".appbar"));
 
@@ -30,7 +30,7 @@ function renderRoute() {
   }
 
   if (route === "services") {
-    renderServicePage(content, { serviceService, templateService });
+    renderServicePage(content, { serviceService, templateService, imageService });
     return;
   }
 

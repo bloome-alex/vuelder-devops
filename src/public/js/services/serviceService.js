@@ -33,3 +33,10 @@ export function updateService(id, payload) {
 export function deleteService(id) {
   return request(`/api/services/${id}`, { method: "DELETE" });
 }
+
+export function deployService(id, payload) {
+  return request(`/api/services/${id}/deploy`, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}

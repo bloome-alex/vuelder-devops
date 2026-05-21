@@ -69,6 +69,17 @@ function formatTemplateImage(template) {
   return template.tag ? `${template.image}:${template.tag}` : template.image;
 }
 
+function getImageTags(images, repository) {
+  return images
+    .filter(image => image.repository === repository)
+    .map(image => image.tag)
+    .filter(Boolean);
+}
+
+function renderTagOptions(tags, selectedTag) {
+  return tags.map(tag => `<option value="${escapeHtml(tag)}"${tag === selectedTag ? " selected" : ""}>${escapeHtml(tag)}</option>`).join("");
+}
+
 function renderTemplateImage(template) {
   const image = formatTemplateImage(template);
 
@@ -482,6 +493,82 @@ function createDetailModal({ service, template }) {
   document.body.append(modal);
 }
 
+function createDeployModal({ service, template, images, onDeploy, container }) {
+  if (hasOpenModal()) {
+    return;
+  }
+
+  const tags = getImageTags(images, template?.image || "");
+  const selectedTag = tags.includes(template?.tag) ? template.tag : tags[0] || template?.tag || "";
+  const modal = document.createElement("div");
+  modal.className = "modal-backdrop";
+  modal.innerHTML = `
+    <div class="modal">
+      <div class="modal-header">
+        <div>
+          <h3>Desplegar ${escapeHtml(service.name)}</h3>
+          <p>Selecciona el tag de la imagen para desplegar este service.</p>
+        </div>
+        <button type="button" class="button ghost close-modal">Cerrar</button>
+      </div>
+      <form class="template-form deploy-form">
+        <div class="form-errors"></div>
+        <section class="tab-panel active">
+          <label>Template<input value="${escapeHtml(template?.name || "-")}" disabled /></label>
+          <label>Imagen<input value="${escapeHtml(template?.image || "-")}" disabled /></label>
+          <label>Tag<select name="tag" required ${tags.length ? "" : "disabled"}>${renderTagOptions(tags, selectedTag)}</select></label>
+          ${!tags.length ? `<div class="empty-state visible">No hay tags sincronizados para esta imagen.</div>` : ""}
+          <strong>Environment</strong>
+          <pre class="detail-json">${escapeHtml(JSON.stringify(service.environment || [], null, 2))}</pre>
+          <strong>Ports</strong>
+          <pre class="detail-json">${escapeHtml(JSON.stringify(service.ports || [], null, 2))}</pre>
+          <strong>Volumes</strong>
+          <pre class="detail-json">${escapeHtml(JSON.stringify(service.volumes || [], null, 2))}</pre>
+        </section>
+        <div class="modal-footer">
+          <button type="button" class="button ghost close-modal">Cancelar</button>
+          <button type="submit" class="button primary deploy-service-action" ${tags.length ? "" : "disabled"}>Desplegar</button>
+        </div>
+      </form>
+    </div>
+  `;
+
+  const form = modal.querySelector("form");
+  const errors = modal.querySelector(".form-errors");
+
+  modal.addEventListener("click", event => {
+    if (event.target === modal || event.target.closest(".close-modal")) {
+      modal.remove();
+    }
+  });
+
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    const button = form.querySelector(".deploy-service-action");
+    const tag = form.querySelector('[name="tag"]').value;
+
+    if (!tag) {
+      errors.innerHTML = "<div>Selecciona un tag para desplegar.</div>";
+      return;
+    }
+
+    button.disabled = true;
+    button.textContent = "Desplegando...";
+
+    try {
+      await onDeploy(getServiceId(service), tag);
+      modal.remove();
+    } catch (error) {
+      button.disabled = false;
+      button.textContent = "Desplegar";
+      errors.innerHTML = `<div>${escapeHtml(error instanceof Error ? error.message : "No se pudo desplegar el service.")}</div>`;
+      createToast(container, error instanceof Error ? error.message : "No se pudo desplegar el service.", "error");
+    }
+  });
+
+  document.body.append(modal);
+}
+
 function createConfirmModal({ title, message, confirmText = "Eliminar", onConfirm }) {
   if (hasOpenModal()) {
     return;
@@ -523,9 +610,10 @@ function createConfirmModal({ title, message, confirmText = "Eliminar", onConfir
   document.body.append(modal);
 }
 
-export function renderServicePage(container, { serviceService, templateService }) {
+export function renderServicePage(container, { serviceService, templateService, imageService }) {
   let services = [];
   let templates = [];
+  let images = [];
   let loading = true;
   let error = "";
 
@@ -534,7 +622,7 @@ export function renderServicePage(container, { serviceService, templateService }
     render();
 
     try {
-      [services, templates] = await Promise.all([serviceService.getServices(), templateService.getTemplates()]);
+      [services, templates, images] = await Promise.all([serviceService.getServices(), templateService.getTemplates(), imageService.getImages()]);
       error = "";
     } catch (loadError) {
       error = loadError instanceof Error ? loadError.message : "No se pudieron cargar los services.";
@@ -561,6 +649,11 @@ export function renderServicePage(container, { serviceService, templateService }
     await load();
   }
 
+  async function deployService(id, tag) {
+    await serviceService.deployService(id, { tag });
+    createToast(container, "Service desplegado correctamente.");
+  }
+
   function openModal(service = emptyService) {
     createServiceModal({ templates, service, onSave: saveService, onClose: () => {}, container });
   }
@@ -578,6 +671,7 @@ export function renderServicePage(container, { serviceService, templateService }
           <td>${formatDate(service.createdAt)}</td>
           <td class="row-actions">
             <button type="button" class="button ghost view-service" data-id="${escapeHtml(getServiceId(service))}">Detalle</button>
+            <button type="button" class="button ghost deploy-service" data-id="${escapeHtml(getServiceId(service))}">Desplegar</button>
             <button type="button" class="button ghost edit-service" data-id="${escapeHtml(getServiceId(service))}">Editar</button>
             <button type="button" class="button danger delete-service" data-id="${escapeHtml(getServiceId(service))}">Eliminar</button>
           </td>
@@ -630,6 +724,10 @@ export function renderServicePage(container, { serviceService, templateService }
 
     if (action.classList.contains("edit-service")) {
       openModal(service);
+    }
+
+    if (action.classList.contains("deploy-service")) {
+      createDeployModal({ service, template: findTemplate(templates, service.template), images, onDeploy: deployService, container });
     }
 
     if (action.classList.contains("delete-service")) {

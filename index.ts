@@ -22,7 +22,7 @@ const imagesRoute = new ImagesRoute().inject('imagesController', imagesControlle
 const templatesService = new TemplatesService().inject('imagesService', imagesService);
 const templatesController = new TemplatesController().inject('templatesService', templatesService);
 const templatesRoute = new TemplatesRoute().inject('templatesController', templatesController);
-const servicesService = new ServicesService().inject('templatesService', templatesService);
+const servicesService = new ServicesService().inject('templatesService', templatesService).inject('imagesService', imagesService);
 const servicesController = new ServicesController().inject('servicesService', servicesService);
 const servicesRoute = new ServicesRoute().inject('servicesController', servicesController);
 
