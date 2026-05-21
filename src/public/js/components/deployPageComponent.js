@@ -128,7 +128,6 @@ export function renderDeployPage(container, deployProvider) {
             </div>
             <div class="task-actions">
               <button type="button" class="button ghost task-restart" data-service-id="${escapeHtml(service.id)}" data-task-id="${escapeHtml(task.id)}">Reiniciar</button>
-              <button type="button" class="button ghost task-inspect" data-service-id="${escapeHtml(service.id)}" data-task-id="${escapeHtml(task.id)}">Inspeccionar</button>
             </div>
           </div>
         </td>
@@ -144,7 +143,6 @@ export function renderDeployPage(container, deployProvider) {
         <td>${formatDate(service.updatedAt)}</td>
         <td class="row-actions">
           <button type="button" class="button ghost service-expand" data-service-id="${escapeHtml(service.id)}">Ver tareas</button>
-          <button type="button" class="button ghost service-inspect" data-service-id="${escapeHtml(service.id)}">Inspeccionar</button>
           <button type="button" class="button ghost service-restart" data-service-id="${escapeHtml(service.id)}">Reiniciar</button>
           <button type="button" class="button danger service-delete" data-service-id="${escapeHtml(service.id)}">Eliminar</button>
         </td>
@@ -200,7 +198,7 @@ export function renderDeployPage(container, deployProvider) {
           await deployProvider.loadTasks(serviceId);
           const freshTasks = deployProvider._state?.tasks?.get(serviceId) || [];
           tempDiv.innerHTML = freshTasks.length
-            ? `<td colspan="6"><div class="task-row-content"><div class="task-info">${freshTasks.map(t => `<span class="task-field"><strong>Estado:</strong> ${escapeHtml(t.state)}</span><span class="task-field"><strong>Creación:</strong> ${formatDate(t.createdAt)}</span><span class="task-field"><strong>Nodo:</strong> ${escapeHtml(t.node)}</span><span class="task-field"><strong>Tarea:</strong> <code>${escapeHtml(t.taskId)}</code></span></div><div class="task-actions"><button type="button" class="button ghost task-restart" data-service-id="${escapeHtml(serviceId)}" data-task-id="${escapeHtml(t.id)}">Reiniciar</button><button type="button" class="button ghost task-inspect" data-service-id="${escapeHtml(serviceId)}" data-task-id="${escapeHtml(t.id)}">Inspeccionar</button></div>`).join("")}</div></td>`
+            ? `<td colspan="6"><div class="task-row-content"><div class="task-info">${freshTasks.map(t => `<span class="task-field"><strong>Estado:</strong> ${escapeHtml(t.state)}</span><span class="task-field"><strong>Creación:</strong> ${formatDate(t.createdAt)}</span><span class="task-field"><strong>Nodo:</strong> ${escapeHtml(t.node)}</span><span class="task-field"><strong>Tarea:</strong> <code>${escapeHtml(t.taskId)}</code></span></div><div class="task-actions"><button type="button" class="button ghost task-restart" data-service-id="${escapeHtml(serviceId)}" data-task-id="${escapeHtml(t.id)}">Reiniciar</button></div>`).join("")}</div></td>`
             : `<td colspan="6"><div class="task-row-content"><div class="empty-state visible">Sin tareas activas</div></div></td>`;
         }
       }
@@ -223,32 +221,6 @@ export function renderDeployPage(container, deployProvider) {
           }
         }
       });
-      return;
-    }
-
-    const taskInspectBtn = event.target.closest(".task-inspect");
-    if (taskInspectBtn) {
-      const { serviceId, taskId } = taskInspectBtn.dataset;
-      try {
-        const inspection = await deployProvider.inspectTask(serviceId, taskId);
-        const task = deployProvider._state?.tasks?.get(serviceId)?.find(t => t.id === taskId);
-        createContainerDetailModal({ container: task, inspection });
-      } catch (error) {
-        createToast(container, error.message, "error");
-      }
-      return;
-    }
-
-    const serviceInspectBtn = event.target.closest(".service-inspect");
-    if (serviceInspectBtn) {
-      const serviceId = serviceInspectBtn.dataset.serviceId;
-      try {
-        const inspection = await deployProvider.inspectService(serviceId);
-        const service = deployProvider._state?.pageItems?.find(s => s.id === serviceId);
-        createContainerDetailModal({ container: service, inspection });
-      } catch (error) {
-        createToast(container, error.message, "error");
-      }
       return;
     }
 
