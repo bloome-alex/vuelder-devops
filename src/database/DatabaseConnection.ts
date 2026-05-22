@@ -26,10 +26,15 @@ export class DatabaseConnection implements IDatabaseConnection {
       throw new Error('MONGODB_URI environment variable is not defined');
     }
 
+    const dbName = process.env.MONGODB_NAME;
+    if (!dbName) {
+      throw new Error('MONGODB_NAME environment variable is not defined');
+    }
+
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       try {
         Logger.info(`Connecting to MongoDB (attempt ${attempt}/${MAX_RETRIES})...`);
-        await mongoose.connect(uri);
+        await mongoose.connect(uri, { dbName });
         Logger.info('MongoDB connected successfully');
         return;
       } catch (error) {
