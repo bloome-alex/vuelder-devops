@@ -38,4 +38,5 @@ export interface IServicesService {
   restartContainer(containerId: string): Promise<void>;
   removeContainer(containerId: string): Promise<void>;
   inspectContainer(containerId: string): Promise<unknown>;
+  getContainerLogs(containerId: string, tail?: number): Promise<string>;
 }

@@ -405,4 +405,41 @@ export class ServicesService {
     const container = this.docker.getContainer(containerId);
     return container.inspect();
   }
+
+  async getContainerLogs(containerId: string, tail = 200): Promise<string> {
+    const container = this.docker.getContainer(containerId);
+    const inspection = await container.inspect();
+    const logs = await container.logs({
+      stdout: true,
+      stderr: true,
+      timestamps: true,
+      tail: Math.min(Math.max(tail, 1), 1000),
+    }) as Buffer;
+
+    return this.decodeDockerLogs(logs, Boolean(inspection.Config?.Tty));
+  }
+
+  private decodeDockerLogs(logs: Buffer, tty: boolean): string {
+    if (tty) {
+      return logs.toString('utf8');
+    }
+
+    const chunks: Buffer[] = [];
+    let offset = 0;
+
+    while (offset + 8 <= logs.length) {
+      const size = logs.readUInt32BE(offset + 4);
+      const start = offset + 8;
+      const end = start + size;
+
+      if (end > logs.length) {
+        break;
+      }
+
+      chunks.push(logs.subarray(start, end));
+      offset = end;
+    }
+
+    return chunks.length ? Buffer.concat(chunks).toString('utf8') : logs.toString('utf8');
+  }
 }

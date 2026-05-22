@@ -2,6 +2,7 @@ import { createEmptyStateComponent } from "./emptyStateComponent.js";
 import { createPaginationComponent } from "./paginationComponent.js";
 import { createConfirmModal } from "./confirmModalComponent.js";
 import { createContainerDetailModal } from "./containerDetailModal.js";
+import { createTaskLogsModal } from "./taskLogsModal.js";
 
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>'"]/g, character => ({
@@ -115,39 +116,41 @@ export function renderDeployPage(container, deployProvider) {
   });
 
   function renderServiceRow(service, tasks) {
-    const taskRows = (tasks || []).map(task => `
-      <tr class="task-row" data-service-id="${escapeHtml(service.id)}" data-task-id="${escapeHtml(task.id)}">
-        <td colspan="6">
-          <div class="task-row-content">
-            <div class="task-info">
-              <span class="task-field"><strong>Estado:</strong> ${escapeHtml(task.state)}</span>
-              <span class="task-field"><strong>Creación:</strong> ${formatDate(task.createdAt)}</span>
-              <span class="task-field"><strong>Actualización:</strong> ${formatDate(task.status)}</span>
-              <span class="task-field"><strong>Nodo:</strong> ${escapeHtml(task.node)}</span>
-              <span class="task-field"><strong>Tarea:</strong> <code>${escapeHtml(task.taskId)}</code></span>
-            </div>
-            <div class="task-actions">
-              <button type="button" class="button ghost task-restart" data-service-id="${escapeHtml(service.id)}" data-task-id="${escapeHtml(task.id)}">Reiniciar</button>
-            </div>
-          </div>
-        </td>
-      </tr>
-    `).join("");
-
     return `
       <tr class="service-row" data-service-id="${escapeHtml(service.id)}">
-        <td><div class="image-name"><span class="image-chip">▤</span>${escapeHtml(service.name)}</div></td>
+        <td><div class="image-name"><button type="button" class="expand-icon" data-service-id="${escapeHtml(service.id)}">▼</button><span class="image-chip">▤</span>${escapeHtml(service.name)}</div></td>
         <td><span class="tag">${escapeHtml(service.template)}</span></td>
         <td>${escapeHtml(formatPorts(service.ports))}</td>
         <td>${formatDate(service.createdAt)}</td>
         <td>${formatDate(service.updatedAt)}</td>
         <td class="row-actions">
-          <button type="button" class="button ghost service-expand" data-service-id="${escapeHtml(service.id)}">Ver tareas</button>
-          <button type="button" class="button ghost service-restart" data-service-id="${escapeHtml(service.id)}">Reiniciar</button>
           <button type="button" class="button danger service-delete" data-service-id="${escapeHtml(service.id)}">Eliminar</button>
         </td>
       </tr>
-      ${taskRows}
+    `;
+  }
+
+  function renderTaskCard(serviceId, task) {
+    return `
+      <article class="task-card">
+        <div class="task-card-header">
+          <div>
+            <span class="task-status ${escapeHtml(task.state)}">${escapeHtml(task.state || "desconocido")}</span>
+            <h4>${escapeHtml(task.name || "Tarea sin nombre")}</h4>
+          </div>
+          <div class="task-actions">
+            <button type="button" class="button ghost task-logs" data-service-id="${escapeHtml(serviceId)}" data-task-id="${escapeHtml(task.id)}" data-task-name="${escapeHtml(task.name || task.taskId || task.id)}">Logs</button>
+            <button type="button" class="button ghost task-inspect" data-service-id="${escapeHtml(serviceId)}" data-task-id="${escapeHtml(task.id)}" data-task-name="${escapeHtml(task.name || task.taskId || task.id)}">Inspeccionar</button>
+          </div>
+        </div>
+        <div class="task-card-grid">
+          <span class="task-field"><strong>Imagen</strong>${escapeHtml(task.image || "-")}</span>
+          <span class="task-field"><strong>Estado Docker</strong>${escapeHtml(task.status || "-")}</span>
+          <span class="task-field"><strong>Creación</strong>${formatDate(task.createdAt)}</span>
+          <span class="task-field"><strong>Nodo</strong>${escapeHtml(task.node || "local")}</span>
+          <span class="task-field task-id"><strong>ID tarea</strong><code>${escapeHtml(task.taskId || task.id)}</code></span>
+        </div>
+      </article>
     `;
   }
 
@@ -174,82 +177,95 @@ export function renderDeployPage(container, deployProvider) {
     }
   });
 
-  container.onclick = async event => {
-    const expandBtn = event.target.closest(".service-expand");
-    if (expandBtn) {
-      const serviceId = expandBtn.dataset.serviceId;
-      const existingTasks = deployProvider._state?.tasks?.get(serviceId);
-      if (!existingTasks) {
-        await deployProvider.loadTasks(serviceId);
-      }
+  let expandedServiceId = null;
+
+  async function handleServiceRowClick(event) {
+    const target = event.target;
+
+    if (target.classList.contains("expand-icon")) {
+      event.stopPropagation();
+      const serviceId = target.dataset.serviceId;
       const row = tableBody.querySelector(`tr.service-row[data-service-id="${CSS.escape(serviceId)}"]`);
       const nextRow = row?.nextElementSibling;
-      if (nextRow?.classList.contains("task-row")) {
-        nextRow.remove();
+      const isCurrentlyExpanded = nextRow?.classList.contains("task-row") && nextRow?.style.display !== "none";
+
+      if (isCurrentlyExpanded) {
+        nextRow.style.display = "none";
+        target.style.transform = "rotate(0deg)";
       } else {
-        const service = deployProvider._state?.pageItems?.find(s => s.id === serviceId);
-        if (service) {
-          const tasks = deployProvider._state?.tasks?.get(serviceId) || [];
-          const tempDiv = document.createElement("tr");
-          tempDiv.className = "task-row";
-          tempDiv.dataset.serviceId = serviceId;
-          tempDiv.innerHTML = `<td colspan="6"><div class="task-row-content"><div class="task-loading">Cargando tareas...</div></div></td>`;
-          row.after(tempDiv);
-          await deployProvider.loadTasks(serviceId);
-          const freshTasks = deployProvider._state?.tasks?.get(serviceId) || [];
-          tempDiv.innerHTML = freshTasks.length
-            ? `<td colspan="6"><div class="task-row-content"><div class="task-info">${freshTasks.map(t => `<span class="task-field"><strong>Estado:</strong> ${escapeHtml(t.state)}</span><span class="task-field"><strong>Creación:</strong> ${formatDate(t.createdAt)}</span><span class="task-field"><strong>Nodo:</strong> ${escapeHtml(t.node)}</span><span class="task-field"><strong>Tarea:</strong> <code>${escapeHtml(t.taskId)}</code></span></div><div class="task-actions"><button type="button" class="button ghost task-restart" data-service-id="${escapeHtml(serviceId)}" data-task-id="${escapeHtml(t.id)}">Reiniciar</button></div>`).join("")}</div></td>`
-            : `<td colspan="6"><div class="task-row-content"><div class="empty-state visible">Sin tareas activas</div></div></td>`;
+        if (expandedServiceId && expandedServiceId !== serviceId) {
+          const prevRow = tableBody.querySelector(`tr.service-row[data-service-id="${CSS.escape(expandedServiceId)}"]`);
+          const prevNextRow = prevRow?.nextElementSibling;
+          if (prevNextRow?.classList.contains("task-row")) {
+            prevNextRow.style.display = "none";
+          }
+          const prevExpandBtn = container.querySelector(`.expand-icon[data-service-id="${CSS.escape(expandedServiceId)}"]`);
+          if (prevExpandBtn) {
+            prevExpandBtn.style.transform = "rotate(0deg)";
+          }
         }
+
+        let taskRow = tableBody.querySelector(`tr.task-row[data-service-id="${CSS.escape(serviceId)}"]`);
+        if (!taskRow) {
+          taskRow = document.createElement("tr");
+          taskRow.className = "task-row";
+          taskRow.dataset.serviceId = serviceId;
+          row.after(taskRow);
+        }
+        taskRow.style.display = "table-row";
+        taskRow.innerHTML = `<td colspan="6"><div class="task-row-content"><div class="task-loading">Cargando tareas...</div></div></td>`;
+
+        await deployProvider.loadTasks(serviceId, false);
+
+        const freshTasks = deployProvider.getTasks(serviceId);
+        taskRow.innerHTML = freshTasks.length
+          ? `<td colspan="6"><div class="task-row-content"><div class="task-list">${freshTasks.map(task => renderTaskCard(serviceId, task)).join("")}</div></div></td>`
+          : `<td colspan="6"><div class="task-row-content"><div class="empty-state visible">Sin tareas activas</div></div></td>`;
+        target.style.transform = "rotate(180deg)";
+        expandedServiceId = serviceId;
       }
       return;
     }
 
-    const taskRestartBtn = event.target.closest(".task-restart");
-    if (taskRestartBtn) {
-      const { serviceId, taskId } = taskRestartBtn.dataset;
-      createConfirmModal({
-        title: "Reiniciar tarea",
-        message: "¿Reiniciar este contenedor?",
-        confirmText: "Reiniciar",
-        onConfirm: async () => {
-          try {
-            await deployProvider.restartTask(serviceId, taskId);
-            createToast(container, "Tarea reiniciada.");
-          } catch (error) {
-            createToast(container, error.message, "error");
-          }
-        }
+    const taskInspectBtn = target.closest(".task-inspect");
+    if (taskInspectBtn) {
+      const { serviceId, taskId, taskName } = taskInspectBtn.dataset;
+      taskInspectBtn.disabled = true;
+      taskInspectBtn.textContent = "Inspeccionando...";
+
+      try {
+        const inspection = await deployProvider.inspectTask(serviceId, taskId);
+        createContainerDetailModal({
+          container: { id: taskId, name: taskName },
+          inspection,
+          title: "Inspect de la tarea"
+        });
+      } catch (error) {
+        createToast(container, error.message, "error");
+      } finally {
+        taskInspectBtn.disabled = false;
+        taskInspectBtn.textContent = "Inspeccionar";
+      }
+      return;
+    }
+
+    const taskLogsBtn = target.closest(".task-logs");
+    if (taskLogsBtn) {
+      const { serviceId, taskId, taskName } = taskLogsBtn.dataset;
+      createTaskLogsModal({
+        task: { id: taskId, name: taskName },
+        loadLogs: tail => deployProvider.getTaskLogs(serviceId, taskId, tail)
       });
       return;
     }
 
-    const serviceRestartBtn = event.target.closest(".service-restart");
-    if (serviceRestartBtn) {
-      const serviceId = serviceRestartBtn.dataset.serviceId;
-      createConfirmModal({
-        title: "Reiniciar servicio",
-        message: "¿Reiniciar todos los contenedores de este servicio?",
-        confirmText: "Reiniciar",
-        onConfirm: async () => {
-          try {
-            await deployProvider.restartServiceTasks(serviceId);
-            createToast(container, "Servicio reiniciado.");
-          } catch (error) {
-            createToast(container, error.message, "error");
-          }
-        }
-      });
-      return;
-    }
-
-    const serviceDeleteBtn = event.target.closest(".service-delete");
+    const serviceDeleteBtn = target.closest(".service-delete");
     if (serviceDeleteBtn) {
       const serviceId = serviceDeleteBtn.dataset.serviceId;
-      const service = deployProvider._state?.pageItems?.find(s => s.id === serviceId);
+      const service = deployProvider.getState()?.pageItems?.find(s => s.id === serviceId);
       createConfirmModal({
         title: "Eliminar despliegue",
-        message: `¿Eliminar el despliegue de ${service?.name}? Esto detendra y eliminara sus contenedores.`,
+        message: `¿Eliminar el despliegue de ${service?.name}? Esto detendrá y eliminará sus contenedores.`,
         confirmText: "Eliminar",
         onConfirm: async () => {
           try {
@@ -262,5 +278,7 @@ export function renderDeployPage(container, deployProvider) {
       });
       return;
     }
-  };
+  }
+
+  tableBody.addEventListener("click", handleServiceRowClick);
 }

@@ -24,10 +24,6 @@ export function getTasks(serviceId) {
   return request(`/api/services/${serviceId}/tasks`);
 }
 
-export function restartTask(serviceId, containerId) {
-  return request(`/api/services/${serviceId}/tasks/${containerId}/restart`, { method: "POST" });
-}
-
 export function removeTask(serviceId, containerId) {
   return request(`/api/services/${serviceId}/tasks/${containerId}`, { method: "DELETE" });
 }
@@ -36,8 +32,9 @@ export function inspectTask(serviceId, containerId) {
   return request(`/api/services/${serviceId}/tasks/${containerId}`);
 }
 
-export function restartService(serviceId) {
-  return request(`/api/services/${serviceId}/tasks`, { method: "POST" });
+export function getTaskLogs(serviceId, containerId, tail = 200) {
+  const params = new URLSearchParams({ tail: String(tail) });
+  return request(`/api/services/${serviceId}/tasks/${containerId}/logs?${params.toString()}`);
 }
 
 export function undeployService(serviceId) {

@@ -71,20 +71,23 @@ export function createDeployProvider({ deployService, rowsPerPage = 10 }) {
     }
   }
 
-  async function loadTasks(serviceId) {
+  async function loadTasks(serviceId, notifySubscriber = true) {
     try {
       const serviceTasks = await deployService.getTasks(serviceId);
       tasks.set(serviceId, serviceTasks);
-      notify();
+      if (notifySubscriber) {
+        notify();
+      }
     } catch (taskError) {
       tasks.set(serviceId, []);
-      notify();
+      if (notifySubscriber) {
+        notify();
+      }
     }
   }
 
-  async function restartTask(serviceId, containerId) {
-    await deployService.restartTask(serviceId, containerId);
-    await loadTasks(serviceId);
+  function getTasks(serviceId) {
+    return tasks.get(serviceId) || [];
   }
 
   async function removeTask(serviceId, containerId) {
@@ -96,12 +99,8 @@ export function createDeployProvider({ deployService, rowsPerPage = 10 }) {
     return deployService.inspectTask(serviceId, containerId);
   }
 
-  async function restartServiceTasks(serviceId) {
-    const serviceTasks = tasks.get(serviceId) || [];
-    for (const task of serviceTasks) {
-      await deployService.restartTask(serviceId, task.id);
-    }
-    await loadTasks(serviceId);
+  async function getTaskLogs(serviceId, containerId, tail) {
+    return deployService.getTaskLogs(serviceId, containerId, tail);
   }
 
   async function undeployService(serviceId) {
@@ -155,11 +154,17 @@ export function createDeployProvider({ deployService, rowsPerPage = 10 }) {
     refresh() {
       return loadServices();
     },
-    loadTasks(serviceId) {
-      return loadTasks(serviceId);
+    loadTasks(serviceId, notifySubscriber = true) {
+      return loadTasks(serviceId, notifySubscriber);
     },
-    restartTask(serviceId, containerId) {
-      return restartTask(serviceId, containerId);
+    getTasks(serviceId) {
+      return getTasks(serviceId);
+    },
+    getState() {
+      return getState();
+    },
+    hasTasks(serviceId) {
+      return tasks.has(serviceId);
     },
     removeTask(serviceId, containerId) {
       return removeTask(serviceId, containerId);
@@ -167,8 +172,8 @@ export function createDeployProvider({ deployService, rowsPerPage = 10 }) {
     inspectTask(serviceId, containerId) {
       return inspectTask(serviceId, containerId);
     },
-    restartServiceTasks(serviceId) {
-      return restartServiceTasks(serviceId);
+    getTaskLogs(serviceId, containerId, tail) {
+      return getTaskLogs(serviceId, containerId, tail);
     },
     removeService(serviceId) {
       return removeService(serviceId);

@@ -128,33 +128,44 @@ export class ServicesController {
     }
   };
 
-  restartTask = async (req: Request<{ id: string }>, res: Response): Promise<void> => {
+  restartTask = async (req: Request<{ id: string; containerId: string }>, res: Response): Promise<void> => {
     try {
       const servicesService = this.get<IServicesService>('servicesService');
-      await servicesService.restartContainer(req.params.id);
+      await servicesService.restartContainer(req.params.containerId);
       res.status(204).send();
     } catch (error) {
       this.handleError(res, error, 'Unexpected error restarting container');
     }
   };
 
-  removeTask = async (req: Request<{ id: string }>, res: Response): Promise<void> => {
+  removeTask = async (req: Request<{ id: string; containerId: string }>, res: Response): Promise<void> => {
     try {
       const servicesService = this.get<IServicesService>('servicesService');
-      await servicesService.removeContainer(req.params.id);
+      await servicesService.removeContainer(req.params.containerId);
       res.status(204).send();
     } catch (error) {
       this.handleError(res, error, 'Unexpected error removing container');
     }
   };
 
-  inspectTask = async (req: Request<{ id: string }>, res: Response): Promise<void> => {
+  inspectTask = async (req: Request<{ id: string; containerId: string }>, res: Response): Promise<void> => {
     try {
       const servicesService = this.get<IServicesService>('servicesService');
-      const inspection = await servicesService.inspectContainer(req.params.id);
+      const inspection = await servicesService.inspectContainer(req.params.containerId);
       res.json(inspection);
     } catch (error) {
       this.handleError(res, error, 'Unexpected error inspecting container');
+    }
+  };
+
+  getTaskLogs = async (req: Request<{ id: string; containerId: string }, object, object, { tail?: string }>, res: Response): Promise<void> => {
+    try {
+      const servicesService = this.get<IServicesService>('servicesService');
+      const tail = Number.parseInt(req.query.tail || '200', 10);
+      const logs = await servicesService.getContainerLogs(req.params.containerId, Number.isNaN(tail) ? 200 : tail);
+      res.json({ logs });
+    } catch (error) {
+      this.handleError(res, error, 'Unexpected error loading container logs');
     }
   };
 

@@ -12,7 +12,7 @@ function formatJson(data) {
   return escapeHtml(JSON.stringify(data, null, 2));
 }
 
-export function createContainerDetailModal({ container, inspection }) {
+export function createContainerDetailModal({ container, inspection, title = "Detalle del Contenedor" }) {
   if (document.body.querySelector(".modal-backdrop")) {
     return;
   }
@@ -23,7 +23,7 @@ export function createContainerDetailModal({ container, inspection }) {
     <div class="modal large">
       <div class="modal-header">
         <div>
-          <h3>Detalle del Contenedor</h3>
+          <h3>${escapeHtml(title)}</h3>
           <p>${escapeHtml(container.name || container.id)}</p>
         </div>
         <button type="button" class="button ghost close-modal">Cerrar</button>
@@ -33,6 +33,7 @@ export function createContainerDetailModal({ container, inspection }) {
         <button type="button" class="tab" data-tab="spec">Spec</button>
         <button type="button" class="tab" data-tab="labels">Labels</button>
         <button type="button" class="tab" data-tab="env">Entorno</button>
+        <button type="button" class="tab" data-tab="inspect">Inspect completo</button>
       </div>
       <section class="tab-panel active" data-panel="general">
         <div class="detail-grid">
@@ -53,6 +54,9 @@ export function createContainerDetailModal({ container, inspection }) {
       </section>
       <section class="tab-panel" data-panel="env">
         <div class="detail-env">${(inspection.Config?.Env || []).map(item => `<div class="env-item"><span class="env-key">${escapeHtml(item.split("=")[0])}</span><span class="env-value">${escapeHtml(item.split("=").slice(1).join("="))}</span></div>`).join("") || "<div class=\"empty-state visible\">Sin variables de entorno</div>"}</div>
+      </section>
+      <section class="tab-panel" data-panel="inspect">
+        <pre class="detail-json">${formatJson(inspection || {})}</pre>
       </section>
       <div class="modal-footer">
         <button type="button" class="button ghost close-modal">Cerrar</button>
