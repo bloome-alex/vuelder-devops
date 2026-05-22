@@ -11,6 +11,9 @@ import { TemplatesRoute } from './src/modules/templates/routes/TemplatesRoute';
 import { ServicesController } from './src/modules/services/controllers/ServicesController';
 import { ServicesService } from './src/modules/services/services/ServicesService';
 import { ServicesRoute } from './src/modules/services/routes/ServicesRoute';
+import { NginxController } from './src/modules/nginx/controllers/NginxController';
+import { NginxService } from './src/modules/nginx/services/NginxService';
+import { NginxRoute } from './src/modules/nginx/routes/NginxRoute';
 import { Logger } from './src/utils/Logger';
 
 const app = new Server();
@@ -25,11 +28,15 @@ const templatesRoute = new TemplatesRoute().inject('templatesController', templa
 const servicesService = new ServicesService().inject('templatesService', templatesService).inject('imagesService', imagesService);
 const servicesController = new ServicesController().inject('servicesService', servicesService);
 const servicesRoute = new ServicesRoute().inject('servicesController', servicesController);
+const nginxService = new NginxService().inject('servicesService', servicesService);
+const nginxController = new NginxController().inject('nginxService', nginxService);
+const nginxRoute = new NginxRoute().inject('nginxController', nginxController);
 
 //Añadir rutas
 routes.add(imagesRoute);
 routes.add(templatesRoute);
 routes.add(servicesRoute);
+routes.add(nginxRoute);
 
 app.inject('db', db);
 app.setRoutes(routes);
