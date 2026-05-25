@@ -8,7 +8,10 @@ function escapeHtml(value) {
   })[character]);
 }
 
-function renderImageRow(image) {
+function renderImageRow(image, deletingImage) {
+  const imageKey = `${image.repository}:${image.tag}`;
+  const isDeleting = deletingImage === imageKey;
+
   return `
     <tr>
       <td>
@@ -22,6 +25,11 @@ function renderImageRow(image) {
       <td>${escapeHtml(image.size)}</td>
       <td>${escapeHtml(image.updated)}</td>
       <td class="digest">${escapeHtml(image.digest)}</td>
+      <td>
+        <button type="button" class="button danger delete-image" data-repository="${escapeHtml(image.repository)}" data-tag="${escapeHtml(image.tag)}" ${isDeleting ? "disabled" : ""}>
+          ${isDeleting ? "Eliminando..." : "Eliminar"}
+        </button>
+      </td>
     </tr>
   `;
 }
@@ -39,6 +47,7 @@ export function createImageTableComponent() {
           <th>Tamaño</th>
           <th>Actualizada</th>
           <th>Digest</th>
+          <th>Acciones</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -49,8 +58,8 @@ export function createImageTableComponent() {
 
   return {
     element: wrapper,
-    render(images) {
-      tableBody.innerHTML = images.map(renderImageRow).join("");
+    render(images, deletingImage = "") {
+      tableBody.innerHTML = images.map(image => renderImageRow(image, deletingImage)).join("");
     }
   };
 }

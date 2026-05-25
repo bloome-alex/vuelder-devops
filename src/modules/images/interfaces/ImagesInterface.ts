@@ -47,4 +47,5 @@ export interface IDockerConfigResponse {
 export interface IImagesService {
   listImages(): Promise<IImageRepository[]>;
   syncImages(): Promise<IImageSyncResult>;
+  deleteImage(repository: string, tag: string): Promise<boolean>;
 }

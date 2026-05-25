@@ -12,6 +12,10 @@ import { ImageSchema } from '../schemas/ImageSchema';
 
 type Injectable = object;
 const REGISTRY_REQUEST_TIMEOUT_MS = 10000;
+const MANIFEST_ACCEPT_HEADER = [
+  'application/vnd.docker.distribution.manifest.v2+json',
+  'application/vnd.oci.image.manifest.v1+json',
+].join(', ');
 
 export class ImagesService {
   private dependencies = new Map<string, Injectable>();
@@ -74,6 +78,18 @@ export class ImagesService {
     };
   }
 
+  async deleteImage(repository: string, tag: string): Promise<boolean> {
+    const image = await ImageSchema.findOne({ repository, name: tag }).lean().exec();
+    if (!image) {
+      return false;
+    }
+
+    await this.deleteRegistryTag(repository, tag);
+    const result = await ImageSchema.deleteOne({ repository, name: tag }).exec();
+
+    return result.deletedCount > 0;
+  }
+
   private async getNewRepositoryImages(repository: string): Promise<IImageRecord[]> {
     try {
       const repositoryPath = repository.split('/').map(encodeURIComponent).join('/');
@@ -108,10 +124,7 @@ export class ImagesService {
   private async getTagMetadata(repository: string, repositoryPath: string, tag: string): Promise<IImageRecord> {
     try {
       const manifest = await this.requestRegistry<IDockerManifestResponse>(`/v2/${repositoryPath}/manifests/${encodeURIComponent(tag)}`, {
-        Accept: [
-          'application/vnd.docker.distribution.manifest.v2+json',
-          'application/vnd.oci.image.manifest.v1+json',
-        ].join(', '),
+        Accept: MANIFEST_ACCEPT_HEADER,
       });
 
       if (!manifest.config?.digest) {
@@ -173,18 +186,59 @@ export class ImagesService {
   }
 
   private async requestRegistry<T>(path: string, headers?: Record<string, string>): Promise<T> {
+    const response = await this.requestRegistryResponse(path, { method: 'GET', headers });
+
+    try {
+      return await response.json() as T;
+    } catch (error) {
+      throw new Error(`Docker registry returned invalid JSON for ${path}: ${this.getErrorMessage(error)}`);
+    }
+  }
+
+  private async deleteRegistryTag(repository: string, tag: string): Promise<void> {
+    const repositoryPath = repository.split('/').map(encodeURIComponent).join('/');
+    const manifestPath = `/v2/${repositoryPath}/manifests/${encodeURIComponent(tag)}`;
+    const manifestResponse = await this.requestRegistryResponse(manifestPath, {
+      method: 'GET',
+      headers: { Accept: MANIFEST_ACCEPT_HEADER },
+      allowNotFound: true,
+    });
+
+    if (manifestResponse.status === 404) {
+      return;
+    }
+
+    const digest = manifestResponse.headers.get('Docker-Content-Digest');
+    if (!digest) {
+      throw new Error(`Docker registry did not return a manifest digest for ${repository}:${tag}`);
+    }
+
+    await this.requestRegistryResponse(`/v2/${repositoryPath}/manifests/${encodeURIComponent(digest)}`, {
+      method: 'DELETE',
+      allowNotFound: true,
+    });
+  }
+
+  private async requestRegistryResponse(
+    path: string,
+    options: { method: 'GET' | 'DELETE'; headers?: Record<string, string>; allowNotFound?: boolean },
+  ): Promise<Response> {
     const registryUrl = this.getRegistryUrl();
     const requestUrl = new URL(path, registryUrl);
 
     let response: Response;
     try {
       response = await fetch(requestUrl, {
-        method: 'GET',
-        headers,
+        method: options.method,
+        headers: options.headers,
         signal: AbortSignal.timeout(REGISTRY_REQUEST_TIMEOUT_MS),
       });
     } catch (error) {
       throw new Error(`Docker registry request failed for ${path}: ${this.getErrorMessage(error)}`);
+    }
+
+    if (response.status === 404 && options.allowNotFound) {
+      return response;
     }
 
     if (!response.ok) {
@@ -192,11 +246,7 @@ export class ImagesService {
       throw new Error(`Docker registry responded ${response.status} for ${path}${body ? `: ${body}` : ''}`);
     }
 
-    try {
-      return await response.json() as T;
-    } catch (error) {
-      throw new Error(`Docker registry returned invalid JSON for ${path}: ${this.getErrorMessage(error)}`);
-    }
+    return response;
   }
 
   private getRegistryUrl(): URL {

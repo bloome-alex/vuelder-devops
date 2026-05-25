@@ -105,3 +105,23 @@ export async function syncImages() {
 
   return response.json();
 }
+
+export async function deleteImage(repository, tag) {
+  const params = new URLSearchParams({ repository, tag });
+  let response;
+
+  try {
+    response = await fetchWithTimeout(`/api/images?${params.toString()}`, { method: "DELETE" }, 60000);
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error("La eliminación de la imagen tardó demasiado. Revisa la conexión con Docker.");
+    }
+
+    throw new Error("No se pudo conectar con el backend para eliminar la imagen.");
+  }
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => null);
+    throw new Error(error?.message || "No se pudo eliminar la imagen.");
+  }
+}

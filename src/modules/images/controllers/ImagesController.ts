@@ -42,4 +42,29 @@ export class ImagesController {
       });
     }
   };
+
+  destroy = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const repository = typeof req.query.repository === 'string' ? req.query.repository.trim() : '';
+      const tag = typeof req.query.tag === 'string' ? req.query.tag.trim() : '';
+
+      if (!repository || !tag) {
+        res.status(400).json({ message: 'Repository and tag are required' });
+        return;
+      }
+
+      const imagesService = this.get<IImagesService>('imagesService');
+      const deleted = await imagesService.deleteImage(repository, tag);
+      if (!deleted) {
+        res.status(404).json({ message: 'Image not found' });
+        return;
+      }
+
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({
+        message: error instanceof Error ? error.message : 'Unexpected error deleting image',
+      });
+    }
+  };
 }

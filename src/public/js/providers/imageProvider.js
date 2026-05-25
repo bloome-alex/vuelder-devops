@@ -4,6 +4,7 @@ export function createImageProvider({ imageService, rowsPerPage = 6 }) {
   let images = [];
   let loading = true;
   let syncing = false;
+  let deletingImage = "";
   let error = "";
   let syncMessage = "";
   const subscribers = new Set();
@@ -37,6 +38,7 @@ export function createImageProvider({ imageService, rowsPerPage = 6 }) {
       searchTerm,
       loading,
       syncing,
+      deletingImage,
       error,
       syncMessage,
       totalItems: filteredImages.length,
@@ -85,6 +87,25 @@ export function createImageProvider({ imageService, rowsPerPage = 6 }) {
     }
   }
 
+  async function deleteImage(repository, tag) {
+    deletingImage = `${repository}:${tag}`;
+    error = "";
+    syncMessage = "";
+    notify();
+
+    try {
+      await imageService.deleteImage(repository, tag);
+      images = images.filter(image => image.repository !== repository || image.tag !== tag);
+      syncMessage = "Imagen eliminada correctamente.";
+    } catch (deleteError) {
+      error = deleteError instanceof Error ? deleteError.message : "No se pudo eliminar la imagen.";
+      throw deleteError;
+    } finally {
+      deletingImage = "";
+      notify();
+    }
+  }
+
   loadImages();
 
   return {
@@ -122,6 +143,9 @@ export function createImageProvider({ imageService, rowsPerPage = 6 }) {
     },
     syncImages() {
       return syncImages();
+    },
+    deleteImage(repository, tag) {
+      return deleteImage(repository, tag);
     }
   };
 }

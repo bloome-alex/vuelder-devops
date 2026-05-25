@@ -1,7 +1,18 @@
 import { createEmptyStateComponent } from "./emptyStateComponent.js";
+import { createConfirmModal } from "./confirmModalComponent.js";
 import { createImageTableComponent } from "./imageTableComponent.js";
 import { createPaginationComponent } from "./paginationComponent.js";
 import { createSearchComponent } from "./searchComponent.js";
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>'"]/g, character => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "'": "&#39;",
+    '"': "&quot;"
+  })[character]);
+}
 
 export function renderImagePage(container, imageProvider) {
   container.innerHTML = `
@@ -36,15 +47,33 @@ export function renderImagePage(container, imageProvider) {
   panel.append(emptyState.element, imageTable.element, pagination.element);
 
   syncButton.addEventListener("click", () => imageProvider.syncImages());
+  imageTable.element.addEventListener("click", event => {
+    const button = event.target.closest(".delete-image");
+    if (!button) {
+      return;
+    }
+
+    const { repository, tag } = button.dataset;
+    if (!repository || !tag) {
+      return;
+    }
+
+    createConfirmModal({
+      title: "Eliminar imagen",
+      message: `Se eliminará ${escapeHtml(repository)}:${escapeHtml(tag)} de Mongo y del registry.`,
+      confirmText: "Eliminar",
+      onConfirm: () => imageProvider.deleteImage(repository, tag)
+    });
+  });
 
   imageProvider.subscribe(state => {
-    imageTable.render(state.pageItems);
+    imageTable.render(state.pageItems, state.deletingImage);
     emptyState.render(state.loading ? 1 : state.totalItems, state.error || "No se encontraron imágenes con el filtro ingresado.");
     pagination.render(state);
     syncButton.disabled = state.syncing;
     syncButton.textContent = state.syncing ? "Actualizando..." : "Actualizar imágenes con Docker";
     summary.textContent = state.loading
       ? "Cargando imágenes..."
-      : state.syncMessage || `${state.totalItems} imagen${state.totalItems === 1 ? "" : "es"} encontrada${state.totalItems === 1 ? "" : "s"}`;
+      : state.error || state.syncMessage || `${state.totalItems} imagen${state.totalItems === 1 ? "" : "es"} encontrada${state.totalItems === 1 ? "" : "s"}`;
   });
 }
